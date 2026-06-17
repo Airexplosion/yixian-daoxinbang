@@ -121,3 +121,5 @@ function bindHeaders() {
 }
 
 load();
+// 页面常开时自动刷新数据(每5分钟),无需手动 F5;data 请求带时间戳绕缓存
+setInterval(load, 5 * 60 * 1000);
