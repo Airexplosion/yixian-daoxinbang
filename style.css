@@ -1,0 +1,241 @@
+/* ============ 宗门大比 · 道心榜 — 仙侠暗色主题 ============ */
+:root{
+  --bg:          #0a0e18;
+  --bg-2:        #0f1422;
+  --panel:       rgba(22,28,44,.72);
+  --panel-line:  rgba(255,255,255,.07);
+  --panel-line2: rgba(255,255,255,.12);
+  --txt:         #e8edf6;
+  --txt-dim:     #97a1b6;
+  --txt-faint:   #5e687d;
+  --gold:        #e8c479;
+  --gold-soft:   #f3dca6;
+
+  /* 门派色 */
+  --jian:     #38bdf8;
+  --qixing:   #a78bfa;
+  --wuxing:   #f59e0b;
+  --duanxuan: #f43f5e;
+
+  --radius:   18px;
+  --radius-sm:12px;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  color:var(--txt);
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #1a2238 0%, rgba(26,34,56,0) 60%),
+    radial-gradient(900px 600px at 90% 10%, rgba(167,139,250,.10), transparent 55%),
+    radial-gradient(900px 600px at 5% 30%, rgba(56,189,248,.10), transparent 55%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  background-attachment:fixed;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* 漂浮灵气背景 */
+.bg-aura{
+  position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+}
+.bg-aura::before, .bg-aura::after{
+  content:""; position:absolute; border-radius:50%;
+  filter:blur(80px); opacity:.5; animation:drift 24s ease-in-out infinite alternate;
+}
+.bg-aura::before{ width:520px; height:520px; left:-120px; top:8%;
+  background:radial-gradient(circle, rgba(56,189,248,.30), transparent 70%); }
+.bg-aura::after{ width:560px; height:560px; right:-140px; top:38%;
+  background:radial-gradient(circle, rgba(245,63,94,.22), transparent 70%); animation-delay:-8s; }
+@keyframes drift{ from{transform:translateY(-18px)} to{transform:translateY(26px)} }
+
+/* ============ Hero ============ */
+.hero{ position:relative; z-index:1; padding:64px 16px 30px; text-align:center; }
+.hero-inner{ max-width:900px; margin:0 auto; }
+.hero-emblem{
+  width:74px; height:74px; margin:0 auto 18px; border-radius:50%;
+  display:grid; place-items:center;
+  font-family:"Noto Serif SC","Songti SC","STSong","SimSun",serif; font-weight:900; font-size:38px; color:var(--gold-soft);
+  background:radial-gradient(circle at 50% 35%, rgba(232,196,121,.22), rgba(232,196,121,.04) 70%);
+  border:1px solid rgba(232,196,121,.45);
+  box-shadow:0 0 0 6px rgba(232,196,121,.06), 0 8px 30px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.15);
+  animation:emblemPulse 4.5s ease-in-out infinite;
+}
+@keyframes emblemPulse{ 0%,100%{box-shadow:0 0 0 6px rgba(232,196,121,.06),0 8px 30px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.15)} 50%{box-shadow:0 0 0 10px rgba(232,196,121,.1),0 10px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.2)} }
+
+.hero-title{
+  font-family:"Noto Serif SC","Songti SC","STSong","SimSun",serif; font-weight:900;
+  font-size:clamp(30px,6vw,52px); margin:0; letter-spacing:.06em; line-height:1.15;
+  background:linear-gradient(180deg,#fff 0%, #d6deec 45%, var(--gold-soft) 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow:0 2px 30px rgba(232,196,121,.18);
+}
+.hero-title .sep{ color:var(--gold); -webkit-text-fill-color:var(--gold); margin:0 .12em; }
+
+.hero-sub{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:20px 0 10px; }
+.chip{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 16px; border-radius:999px; font-size:13.5px; font-weight:500;
+  border:1px solid var(--panel-line2); background:rgba(255,255,255,.04); color:var(--txt-dim);
+  backdrop-filter:blur(8px);
+}
+.chip b{ color:var(--gold-soft); font-weight:700; font-size:1.05em; }
+.chip-season{ border-color:rgba(232,196,121,.4); color:var(--gold-soft); background:rgba(232,196,121,.08); }
+.chip-time::before{ content:"◷"; opacity:.7; }
+
+.hero-note{ margin:8px 0 0; font-size:13px; color:var(--txt-faint); letter-spacing:.02em; }
+
+/* ============ 布局 ============ */
+.wrap{ position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:8px 16px 60px; }
+
+.panel{
+  background:var(--panel);
+  border:1px solid var(--panel-line);
+  border-radius:var(--radius);
+  padding:22px 22px 24px;
+  margin:22px 0;
+  backdrop-filter:blur(14px);
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 18px 48px -22px rgba(0,0,0,.7);
+}
+.panel-head{ margin-bottom:18px; }
+.panel-title{
+  margin:0; font-family:"Noto Serif SC","Songti SC","STSong","SimSun",serif; font-weight:700;
+  font-size:19px; color:#fff; letter-spacing:.04em; display:flex; align-items:center; gap:10px;
+}
+.panel-title::before{
+  content:""; width:4px; height:18px; border-radius:3px;
+  background:linear-gradient(180deg,var(--gold-soft),var(--gold));
+  box-shadow:0 0 10px rgba(232,196,121,.5);
+}
+.panel-desc{ margin:6px 0 0 14px; font-size:12.5px; color:var(--txt-faint); }
+
+/* ============ 门派对比块 ============ */
+.sect-bars{ display:flex; flex-direction:column; gap:16px; }
+.sect-row{ display:grid; grid-template-columns:96px 1fr auto; align-items:center; gap:14px; }
+.sect-label{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; }
+.sect-dot{ width:10px; height:10px; border-radius:50%; box-shadow:0 0 8px currentColor; }
+.sect-crown{
+  font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; margin-left:2px;
+  background:linear-gradient(135deg,var(--gold-soft),var(--gold)); color:#3a2c08;
+}
+.sect-track{ height:14px; border-radius:999px; background:rgba(255,255,255,.05);
+  overflow:hidden; border:1px solid rgba(255,255,255,.05); }
+.sect-fill{ height:100%; border-radius:999px; transition:width 1.1s cubic-bezier(.22,1,.36,1); }
+.sect-val{ font-variant-numeric:tabular-nums; font-weight:700; font-size:15px; min-width:54px; text-align:right; color:#fff; }
+
+/* 门派配色应用 */
+.sect-jian     .sect-dot,.sect-jian.sect-label{color:var(--jian)}
+.sect-qixing   .sect-dot{color:var(--qixing)}
+.sect-wuxing   .sect-dot{color:var(--wuxing)}
+.sect-duanxuan .sect-dot{color:var(--duanxuan)}
+.sect-jian     .sect-fill{background:linear-gradient(90deg,rgba(56,189,248,.35),var(--jian));box-shadow:0 0 12px var(--jian)}
+.sect-qixing   .sect-fill{background:linear-gradient(90deg,rgba(167,139,250,.35),var(--qixing));box-shadow:0 0 12px var(--qixing)}
+.sect-wuxing   .sect-fill{background:linear-gradient(90deg,rgba(245,158,11,.35),var(--wuxing));box-shadow:0 0 12px var(--wuxing)}
+.sect-duanxuan .sect-fill{background:linear-gradient(90deg,rgba(244,63,94,.35),var(--duanxuan));box-shadow:0 0 12px var(--duanxuan)}
+
+/* ============ 筛选 ============ */
+.filters{ display:flex; gap:9px; flex-wrap:wrap; margin-bottom:16px; }
+.filter-btn{
+  padding:8px 18px; border-radius:999px; cursor:pointer; font-size:13.5px; font-weight:600;
+  color:var(--txt-dim); background:rgba(255,255,255,.04);
+  border:1px solid var(--panel-line); transition:.2s; font-family:inherit;
+}
+.filter-btn:hover{ color:#fff; border-color:var(--panel-line2); transform:translateY(-1px); }
+.filter-btn.active{ color:#fff; }
+.filter-btn.active{ background:rgba(255,255,255,.10); border-color:var(--panel-line2); }
+.f-jian.active{     background:rgba(56,189,248,.16); border-color:var(--jian);   color:var(--jian);   box-shadow:0 0 16px rgba(56,189,248,.3) }
+.f-qixing.active{   background:rgba(167,139,250,.16);border-color:var(--qixing); color:#c4b5fd;        box-shadow:0 0 16px rgba(167,139,250,.3) }
+.f-wuxing.active{   background:rgba(245,158,11,.16); border-color:var(--wuxing); color:var(--wuxing);  box-shadow:0 0 16px rgba(245,158,11,.3) }
+.f-duanxuan.active{ background:rgba(244,63,94,.16);  border-color:var(--duanxuan);color:#fb7185;       box-shadow:0 0 16px rgba(244,63,94,.3) }
+
+/* ============ 主榜表格 ============ */
+.board-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+#board{ width:100%; border-collapse:separate; border-spacing:0; min-width:540px; }
+#board thead th{
+  position:sticky; top:0; z-index:2;
+  padding:11px 12px; font-size:12.5px; font-weight:600; color:var(--txt-dim);
+  text-align:right; white-space:nowrap; letter-spacing:.03em;
+  background:rgba(15,20,34,.85); backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--panel-line2);
+}
+#board thead th.col-rank{ text-align:center; width:48px; }
+#board thead th.col-char{ text-align:left; }
+#board th.sortable{ cursor:pointer; user-select:none; transition:color .15s; }
+#board th.sortable:hover{ color:#fff; }
+#board th.sortable.sorted{ color:var(--gold-soft); }
+.caret{ display:inline-block; width:0;height:0; margin-left:5px; vertical-align:middle;
+  border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid currentColor;
+  opacity:0; transition:.15s; }
+#board th.sorted .caret{ opacity:1; }
+#board th.sorted.asc .caret{ transform:rotate(180deg); }
+
+#board tbody td{ padding:10px 12px; text-align:right; border-bottom:1px solid rgba(255,255,255,.05);
+  font-variant-numeric:tabular-nums; font-size:14px; }
+#board tbody tr{ transition:background .15s; }
+#board tbody tr:hover{ background:rgba(255,255,255,.04); }
+#board tbody tr:last-child td{ border-bottom:none; }
+.num.hot{ color:#fff; font-weight:700; }
+.num:not(.hot){ color:var(--txt-dim); }
+.empty{ text-align:center !important; color:var(--txt-faint); padding:34px 0 !important; }
+
+/* 排名徽章 */
+.col-rank{ text-align:center !important; }
+.rank-badge{ display:inline-grid; place-items:center; width:26px; height:26px; border-radius:8px;
+  font-size:13px; font-weight:700; color:var(--txt-dim); background:rgba(255,255,255,.05); }
+.rank-medal{ color:#2a210a; }
+.rank-1{ background:linear-gradient(135deg,#ffe9a8,#e8b94a); box-shadow:0 0 14px rgba(232,185,74,.5) }
+.rank-2{ background:linear-gradient(135deg,#eef2f7,#aeb7c6); box-shadow:0 0 12px rgba(174,183,198,.4) }
+.rank-3{ background:linear-gradient(135deg,#f0c39a,#c97c46); color:#fff; box-shadow:0 0 12px rgba(201,124,70,.45) }
+
+/* 角色单元格 */
+.col-char{ text-align:left !important; }
+.col-char{ display:flex; align-items:center; gap:12px; }
+.ava-wrap{ position:relative; flex:0 0 auto; line-height:0; }
+.ava{ width:42px; height:42px; border-radius:12px; object-fit:cover;
+  border:2px solid rgba(255,255,255,.10); background:#161c2c;
+  box-shadow:0 3px 10px rgba(0,0,0,.45); transition:transform .2s; }
+#board tr:hover .ava{ transform:scale(1.06); }
+.ava-fallback{ display:inline-block; }
+/* 门派描边 */
+.sect-jian     .ava{ border-color:rgba(56,189,248,.6);  box-shadow:0 0 12px rgba(56,189,248,.3) }
+.sect-qixing   .ava{ border-color:rgba(167,139,250,.6); box-shadow:0 0 12px rgba(167,139,250,.3) }
+.sect-wuxing   .ava{ border-color:rgba(245,158,11,.6);  box-shadow:0 0 12px rgba(245,158,11,.3) }
+.sect-duanxuan .ava{ border-color:rgba(244,63,94,.6);   box-shadow:0 0 12px rgba(244,63,94,.3) }
+
+.char-meta{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.char-name{ font-weight:600; font-size:14.5px; color:#fff; white-space:nowrap; }
+.sect-tag{ display:inline-block; align-self:flex-start; font-size:11px; font-weight:600;
+  padding:1px 8px; border-radius:6px; letter-spacing:.04em; }
+.sect-jian     .sect-tag{ color:var(--jian);   background:rgba(56,189,248,.12);  border:1px solid rgba(56,189,248,.3) }
+.sect-qixing   .sect-tag{ color:#c4b5fd;        background:rgba(167,139,250,.12); border:1px solid rgba(167,139,250,.3) }
+.sect-wuxing   .sect-tag{ color:var(--wuxing);  background:rgba(245,158,11,.12);  border:1px solid rgba(245,158,11,.3) }
+.sect-duanxuan .sect-tag{ color:#fb7185;        background:rgba(244,63,94,.12);   border:1px solid rgba(244,63,94,.3) }
+
+/* ============ 图表 ============ */
+.charts-grid{ display:grid; grid-template-columns:1fr 1fr; gap:22px; margin:22px 0; }
+.chart-panel{ margin:0; }
+.chart{ width:100%; height:300px; }
+
+/* ============ 页脚 ============ */
+.foot{ display:flex; flex-direction:column; align-items:center; gap:6px;
+  margin-top:40px; padding-top:24px; border-top:1px solid var(--panel-line);
+  color:var(--txt-dim); font-size:13px; text-align:center; }
+.foot-dim{ color:var(--txt-faint); font-size:12px; }
+
+/* ============ 响应式 ============ */
+@media (max-width:860px){
+  .charts-grid{ grid-template-columns:1fr; }
+  .hero{ padding-top:44px; }
+}
+@media (max-width:560px){
+  .panel{ padding:18px 14px 20px; border-radius:14px; }
+  .sect-row{ grid-template-columns:74px 1fr auto; gap:10px; }
+  .sect-label{ font-size:13.5px; }
+  .ava{ width:38px; height:38px; }
+  .char-name{ font-size:13.5px; }
+  .chart{ height:260px; }
+  .filter-btn{ padding:7px 14px; font-size:13px; }
+  #board tbody td, #board thead th{ padding:9px 8px; }
+}

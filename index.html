@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>宗门大比 · 道心榜 — 弈仙牌</title>
+<link rel="stylesheet" href="style.css">
+<script src="vendor/echarts.min.js"></script>
+</head>
+<body>
+<div class="bg-aura"></div>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-emblem">道</div>
+    <h1 class="hero-title">宗门大比 <span class="sep">·</span> 道心榜</h1>
+    <div class="hero-sub">
+      <span class="chip chip-season">第 <b>10</b> 赛季</span>
+      <span class="chip chip-time" id="gen">更新中…</span>
+    </div>
+    <p class="hero-note">角色级聚合（去最高分），仅排名分数，无任何个人信息</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 门派对比块 -->
+  <section class="panel" id="sect-compare-panel">
+    <div class="panel-head">
+      <h2 class="panel-title">门派强弱对比</h2>
+      <p class="panel-desc">每门派 6 角色平均分再取均值</p>
+    </div>
+    <div id="sectBars" class="sect-bars"></div>
+  </section>
+
+  <!-- 综合排行主榜 -->
+  <section class="panel" id="board-panel">
+    <div class="panel-head">
+      <h2 class="panel-title">综合排行主榜</h2>
+      <p class="panel-desc">点击表头按平均 / 总分 / 中位 / 门槛排序</p>
+    </div>
+
+    <div class="filters" id="sectFilter">
+      <button class="filter-btn active" data-sect="all">全部</button>
+      <button class="filter-btn f-jian"  data-sect="剑宗">剑宗</button>
+      <button class="filter-btn f-qixing" data-sect="七星">七星</button>
+      <button class="filter-btn f-wuxing" data-sect="五行">五行</button>
+      <button class="filter-btn f-duanxuan" data-sect="锻玄">锻玄</button>
+    </div>
+
+    <div class="board-scroll">
+      <table id="board">
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th class="col-char">角色</th>
+            <th class="num sortable" data-k="avg">平均分<i class="caret"></i></th>
+            <th class="num sortable" data-k="sum">总分<i class="caret"></i></th>
+            <th class="num sortable" data-k="median">中位数<i class="caret"></i></th>
+            <th class="num sortable" data-k="threshold">入榜门槛<i class="caret"></i></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 4 图分析 -->
+  <section class="charts-grid">
+    <div class="panel chart-panel">
+      <div class="panel-head"><h2 class="panel-title">道心分分布</h2><p class="panel-desc">各分段人数堆叠（按门派着色）</p></div>
+      <div id="dist" class="chart"></div>
+    </div>
+    <div class="panel chart-panel">
+      <div class="panel-head"><h2 class="panel-title">历史趋势</h2><p class="panel-desc">各门派平均分随赛季变化</p></div>
+      <div id="trend" class="chart"></div>
+    </div>
+    <div class="panel chart-panel">
+      <div class="panel-head"><h2 class="panel-title">门派四维雷达</h2><p class="panel-desc">平均 / 总分 / 中位 / 门槛 归一化</p></div>
+      <div id="radar" class="chart"></div>
+    </div>
+    <div class="panel chart-panel">
+      <div class="panel-head"><h2 class="panel-title">入榜门槛榜</h2><p class="panel-desc">第 100 名分数横向对比</p></div>
+      <div id="threshold" class="chart"></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>弈仙牌 · 宗门大比道心榜</span>
+    <span class="foot-dim">数据为角色级匿名聚合，去最高分计算 · 仅供观赏</span>
+  </footer>
+
+</main>
+
+<script src="theme.js"></script>
+<script src="main.js"></script>
+<script src="charts.js"></script>
+</body>
+</html>
