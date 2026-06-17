@@ -206,6 +206,99 @@ window.renderCharts = function (data) {
     });
   })();
 
+  // ---------- ⑤⑥⑦⑧ 单角色历史趋势(最高分/均分/门槛) + 全榜总分 ----------
+  (function () {
+    const ids = ["trendTop", "trendAvg", "trendThr", "trendSum"];
+    const insts = ids.map(id => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const c = echarts.init(el, null, { renderer: "canvas" });
+      charts.push(c);
+      c.showLoading({ text: "", color: "#38bdf8", maskColor: "rgba(0,0,0,0)" });
+      return c;
+    });
+    if (insts.every(c => !c)) return;
+
+    fetch("data/history/index.json?_=" + Date.now())
+      .then(r => (r.ok ? r.json() : []))
+      .then(files => Promise.all(files.map(f =>
+        fetch("data/history/" + f).then(r => r.json()).catch(() => null))))
+      .then(snapsRaw => {
+        insts.forEach(c => c && c.hideLoading());
+        const snaps = snapsRaw.filter(Boolean)
+          .sort((a, b) => new Date(a.generatedAt) - new Date(b.generatedAt));
+        const xLabels = snaps.map(s => {
+          const d = new Date(s.generatedAt);
+          return isNaN(d) ? s.generatedAt
+            : `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        });
+        const emptyHint = chart => {
+          if (snaps.length <= 1) chart.setOption({ graphic: [{ type: "text", left: "center", top: "middle",
+            style: { text: "趋势数据将随采集累积", fill: "#5b6478", fontSize: 12 } }] });
+        };
+        // 各角色一条线(按门派配色),某指标随时间;legend 可滚动+点选
+        const perChar = metric => chars.map(c => {
+          const main = window.sectMain(c.sect);
+          return {
+            name: c.name, type: "line", smooth: true, symbol: "none", connectNulls: true,
+            lineStyle: { width: 1.5, color: main, opacity: 0.85 },
+            itemStyle: { color: main }, emphasis: { focus: "series", lineStyle: { width: 3 } },
+            data: snaps.map(s => {
+              const e = (s.characters || []).find(x => x.charId === c.charId);
+              return e && e[metric] != null ? e[metric] : null;
+            })
+          };
+        });
+        const drawPerChar = (chart, metric) => {
+          if (!chart) return;
+          chart.setOption({
+            grid: { ...baseGrid, top: 34, right: 100 },
+            legend: { type: "scroll", textStyle: { color: "#cbd5e1", fontSize: 11 }, top: 0,
+              itemWidth: 12, itemHeight: 6, itemGap: 10 },
+            tooltip: { trigger: "axis", ...tooltipBox, order: "valueDesc",
+              extraCssText: tooltipBox.extraCssText + ";max-height:360px;overflow:auto" },
+            xAxis: { type: "category", boundaryGap: false, data: xLabels, axisLabel: axText,
+              axisLine: { lineStyle: { color: window.AXLINE } }, axisTick: { show: false } },
+            yAxis: { type: "value", scale: true, axisLabel: axText,
+              splitLine: { lineStyle: { color: window.SPLIT } } },
+            series: perChar(metric)
+          });
+          emptyHint(chart);
+        };
+
+        drawPerChar(insts[0], "top");
+        drawPerChar(insts[1], "avg");
+        drawPerChar(insts[2], "threshold");
+
+        // 全榜总分(所有角色 sum 之和)随时间,单线
+        if (insts[3]) {
+          const totalData = snaps.map(s => {
+            const list = (s.characters || []).filter(c => c.sum != null);
+            return list.length ? list.reduce((a, c) => a + c.sum, 0) : null;
+          });
+          insts[3].setOption({
+            grid: { ...baseGrid, top: 20 },
+            tooltip: { trigger: "axis", ...tooltipBox,
+              formatter: p => `${p[0].axisValue}<br/>全榜总分 <b>${(p[0].value || 0).toLocaleString()}</b>` },
+            xAxis: { type: "category", boundaryGap: false, data: xLabels, axisLabel: axText,
+              axisLine: { lineStyle: { color: window.AXLINE } }, axisTick: { show: false } },
+            yAxis: { type: "value", scale: true, axisLabel: axText,
+              splitLine: { lineStyle: { color: window.SPLIT } } },
+            series: [{
+              name: "全榜总分", type: "line", smooth: true, symbol: "circle", symbolSize: 6, connectNulls: true,
+              lineStyle: { width: 3, color: "#e8c479", shadowBlur: 10, shadowColor: "rgba(232,196,121,.4)" },
+              itemStyle: { color: "#e8c479", borderColor: "#0f1420", borderWidth: 2 },
+              areaStyle: { opacity: 0.12, color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: "#e8c479" }, { offset: 1, color: "rgba(0,0,0,0)" }]) },
+              data: totalData
+            }]
+          });
+          emptyHint(insts[3]);
+        }
+      })
+      .catch(() => insts.forEach(c => c && c.hideLoading()));
+  })();
+
   // 响应式
   window.addEventListener("resize", () => charts.forEach(c => c.resize()));
 };
