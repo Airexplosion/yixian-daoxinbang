@@ -24,6 +24,9 @@
 
 <main class="wrap">
 
+  <!-- 整体活跃度(场次/场均分,角色级聚合,无玩家个人信息) -->
+  <section class="panel stat-cards" id="overallStats" hidden></section>
+
   <!-- 门派对比块 -->
   <section class="panel" id="sect-compare-panel">
     <div class="panel-head">
@@ -58,6 +61,8 @@
             <th class="num sortable" data-k="sum">总分<i class="caret"></i></th>
             <th class="num sortable" data-k="median">中位数<i class="caret"></i></th>
             <th class="num sortable" data-k="threshold">入榜门槛<i class="caret"></i></th>
+            <th class="num sortable" data-k="games">场次<i class="caret"></i></th>
+            <th class="num sortable" data-k="avgGameScore">场均分<i class="caret"></i></th>
           </tr>
         </thead>
         <tbody></tbody>

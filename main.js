@@ -10,7 +10,7 @@ async function load() {
     DATA = await (await fetch("data/latest.json?_=" + Date.now())).json();
   } catch (e) {
     document.querySelector("#board tbody").innerHTML =
-      `<tr><td colspan="6" class="empty">数据加载失败</td></tr>`;
+      `<tr><td colspan="8" class="empty">数据加载失败</td></tr>`;
     console.error("加载 latest.json 失败:", e);
     return;
   }
@@ -20,12 +20,32 @@ async function load() {
     : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   document.getElementById("gen").textContent = "更新于 " + stamp;
 
+  renderStats();
   renderSectBars();
   renderBoard();
   bindHeaders();
 
   if (window.renderCharts) window.renderCharts(DATA);
   setupTrendFilter();
+}
+
+// 整体活跃度卡片(场次/场均分,角色级聚合,无玩家个人信息)
+function renderStats() {
+  const box = document.getElementById("overallStats");
+  if (!box) return;
+  const g = DATA.gameStats;
+  if (!g || !g.totalGames) { box.hidden = true; return; }
+  box.hidden = false;
+  const cards = [
+    { label: "累计总场次", value: g.totalGames.toLocaleString(), hint: "全角色 10 分钟区间变动累计" },
+    { label: "平均场次/人", value: g.avgGamesPerPlayer ?? "-", hint: `${(g.uniquePlayers || 0).toLocaleString()} 名玩家` },
+    { label: "整体场均分", value: g.overallAvgGameScore ?? "-", hint: "每活跃区间平均分变动" }
+  ];
+  box.innerHTML = `<div class="panel-head"><h2 class="panel-title">整体活跃度</h2>` +
+    `<p class="panel-desc">按"分数变动=打了局"估算,场次为 10 分钟区间近似 · 仅角色级聚合无个人信息</p></div>` +
+    `<div class="stat-grid">${cards.map(c => `<div class="stat-card">` +
+      `<div class="stat-val">${c.value}</div><div class="stat-label">${c.label}</div>` +
+      `<div class="stat-hint">${c.hint}</div></div>`).join("")}</div>`;
 }
 
 // 单角色趋势筛选器:填充下拉(按门派分组) + 联动趋势图 legend
@@ -92,7 +112,7 @@ function renderBoard() {
   rows = rows.sort((a, b) => (a[sortKey] - b[sortKey]) * sortDir);
 
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="6" class="empty">暂无数据</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="8" class="empty">暂无数据</td></tr>`;
     return;
   }
 
@@ -116,6 +136,8 @@ function renderBoard() {
       <td class="num ${sortKey === 'sum' ? 'hot' : ''}">${FMT(c.sum)}</td>
       <td class="num ${sortKey === 'median' ? 'hot' : ''}">${FMT(c.median)}</td>
       <td class="num ${sortKey === 'threshold' ? 'hot' : ''}">${FMT(c.threshold)}</td>
+      <td class="num ${sortKey === 'games' ? 'hot' : ''}">${FMT(c.games)}</td>
+      <td class="num ${sortKey === 'avgGameScore' ? 'hot' : ''}">${FMT(c.avgGameScore)}</td>
     </tr>`;
   }).join("");
 
