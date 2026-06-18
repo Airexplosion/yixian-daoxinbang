@@ -270,31 +270,45 @@ window.renderCharts = function (data) {
         drawPerChar(insts[1], "avg");
         drawPerChar(insts[2], "threshold");
 
-        // 全榜总分(所有角色 sum 之和)随时间,单线
+        // 全榜总分(所有角色 sum 之和)随时间 + 增长率(斜率)双轴
         if (insts[3]) {
           const totalData = snaps.map(s => {
             const list = (s.characters || []).filter(c => c.sum != null);
             return list.length ? list.reduce((a, c) => a + c.sum, 0) : null;
           });
+          const growth = totalData.map((v, i) =>
+            (i === 0 || v == null || totalData[i - 1] == null) ? null : v - totalData[i - 1]);
           insts[3].setOption({
-            grid: { ...baseGrid, top: 20 },
-            tooltip: { trigger: "axis", ...tooltipBox,
-              formatter: p => `${p[0].axisValue}<br/>全榜总分 <b>${(p[0].value || 0).toLocaleString()}</b>` },
+            grid: { ...baseGrid, top: 28, right: 50 },
+            legend: { textStyle: { color: "#cbd5e1", fontSize: 12 }, top: 0, itemWidth: 14, itemHeight: 8, itemGap: 16 },
+            tooltip: { trigger: "axis", ...tooltipBox },
             xAxis: { type: "category", boundaryGap: false, data: xLabels, axisLabel: axText,
               axisLine: { lineStyle: { color: window.AXLINE } }, axisTick: { show: false } },
-            yAxis: { type: "value", scale: true, axisLabel: axText,
-              splitLine: { lineStyle: { color: window.SPLIT } } },
-            series: [{
-              name: "全榜总分", type: "line", smooth: true, symbol: "circle", symbolSize: 6, connectNulls: true,
-              lineStyle: { width: 3, color: "#e8c479", shadowBlur: 10, shadowColor: "rgba(232,196,121,.4)" },
-              itemStyle: { color: "#e8c479", borderColor: "#0f1420", borderWidth: 2 },
-              areaStyle: { opacity: 0.12, color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: "#e8c479" }, { offset: 1, color: "rgba(0,0,0,0)" }]) },
-              data: totalData
-            }]
+            yAxis: [
+              { type: "value", scale: true, name: "总分", nameTextStyle: { color: window.AX, fontSize: 11 },
+                axisLabel: axText, splitLine: { lineStyle: { color: window.SPLIT } } },
+              { type: "value", name: "增长", position: "right", nameTextStyle: { color: "#7dd3a8", fontSize: 11 },
+                axisLabel: { color: "#7dd3a8", fontSize: 11 }, splitLine: { show: false } }
+            ],
+            series: [
+              { name: "全榜总分", type: "line", yAxisIndex: 0, smooth: true, symbol: "circle", symbolSize: 6, connectNulls: true,
+                lineStyle: { width: 3, color: "#e8c479", shadowBlur: 10, shadowColor: "rgba(232,196,121,.4)" },
+                itemStyle: { color: "#e8c479", borderColor: "#0f1420", borderWidth: 2 },
+                areaStyle: { opacity: 0.1, color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: "#e8c479" }, { offset: 1, color: "rgba(0,0,0,0)" }]) },
+                data: totalData },
+              { name: "增长率(Δ总分)", type: "bar", yAxisIndex: 1, barMaxWidth: 14,
+                itemStyle: { color: p => (p.value >= 0 ? "rgba(125,211,168,.75)" : "rgba(244,99,94,.75)"),
+                  borderRadius: [2, 2, 0, 0] },
+                data: growth }
+            ]
           });
           emptyHint(insts[3]);
         }
+        // 需求2:暴露单角色趋势实例 + 角色名,供角色筛选器联动
+        window.trendCharInsts = [insts[0], insts[1], insts[2]].filter(Boolean);
+        window.trendCharNames = chars.map(c => c.name);
+        if (window.applyTrendFilter) window.applyTrendFilter();
       })
       .catch(() => insts.forEach(c => c && c.hideLoading()));
   })();

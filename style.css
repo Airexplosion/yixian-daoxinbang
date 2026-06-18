@@ -145,6 +145,13 @@ body{
 .filter-btn:hover{ color:#fff; border-color:var(--panel-line2); transform:translateY(-1px); }
 .filter-btn.active{ color:#fff; }
 .filter-btn.active{ background:rgba(255,255,255,.10); border-color:var(--panel-line2); }
+
+/* 单角色趋势筛选器 */
+.trend-filter{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:24px 0 -6px; padding:0 4px; }
+.tf-label{ font-family:"Noto Serif SC","Songti SC","STSong","SimSun",serif; font-weight:700; color:#fff; font-size:15px; letter-spacing:.04em; }
+.trend-filter select{ background:rgba(255,255,255,.05); color:var(--txt); border:1px solid var(--panel-line2); border-radius:9px; padding:8px 12px; font-size:13.5px; font-family:inherit; cursor:pointer; outline:none; min-width:150px; }
+.trend-filter select:hover{ border-color:var(--gold-soft); }
+.tf-hint{ color:var(--txt-faint); font-size:12px; }
 .f-jian.active{     background:rgba(56,189,248,.16); border-color:var(--jian);   color:var(--jian);   box-shadow:0 0 16px rgba(56,189,248,.3) }
 .f-qixing.active{   background:rgba(167,139,250,.16);border-color:var(--qixing); color:#c4b5fd;        box-shadow:0 0 16px rgba(167,139,250,.3) }
 .f-wuxing.active{   background:rgba(245,158,11,.16); border-color:var(--wuxing); color:var(--wuxing);  box-shadow:0 0 16px rgba(245,158,11,.3) }

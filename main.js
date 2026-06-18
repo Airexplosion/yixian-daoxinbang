@@ -25,7 +25,33 @@ async function load() {
   bindHeaders();
 
   if (window.renderCharts) window.renderCharts(DATA);
+  setupTrendFilter();
 }
+
+// 单角色趋势筛选器:填充下拉(按门派分组) + 联动趋势图 legend
+function setupTrendFilter() {
+  const sel = document.getElementById("trendCharSel");
+  if (!sel || !DATA) return;
+  const cur = sel.value;
+  const bySect = {};
+  DATA.characters.forEach(c => { (bySect[c.sect] = bySect[c.sect] || []).push(c); });
+  let html = '<option value="all">全部角色</option>';
+  Object.keys(bySect).forEach(sect => {
+    html += `<optgroup label="${sect}">`;
+    bySect[sect].forEach(c => { html += `<option value="${c.name}"${c.name === cur ? " selected" : ""}>${c.name}</option>`; });
+    html += "</optgroup>";
+  });
+  sel.innerHTML = html;
+  sel.onchange = window.applyTrendFilter;
+}
+window.applyTrendFilter = function () {
+  const sel = document.getElementById("trendCharSel");
+  if (!sel || !window.trendCharInsts || !window.trendCharNames) return;
+  const v = sel.value;
+  const selected = {};
+  window.trendCharNames.forEach(n => { selected[n] = (v === "all" || n === v); });
+  window.trendCharInsts.forEach(c => c && c.setOption({ legend: { selected } }));
+};
 
 // ---- 门派对比块 ----
 function sectAverages() {
