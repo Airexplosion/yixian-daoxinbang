@@ -149,8 +149,10 @@ body{
 /* 单角色趋势筛选器 */
 .trend-filter{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:24px 0 -6px; padding:0 4px; }
 .tf-label{ font-family:"Noto Serif SC","Songti SC","STSong","SimSun",serif; font-weight:700; color:#fff; font-size:15px; letter-spacing:.04em; }
-.trend-filter select{ background:rgba(255,255,255,.05); color:var(--txt); border:1px solid var(--panel-line2); border-radius:9px; padding:8px 12px; font-size:13.5px; font-family:inherit; cursor:pointer; outline:none; min-width:150px; }
+.trend-filter select{ background:rgba(20,26,42,.92); color:var(--txt); border:1px solid var(--panel-line2); border-radius:9px; padding:8px 12px; font-size:13.5px; font-family:inherit; cursor:pointer; outline:none; min-width:150px; }
 .trend-filter select:hover{ border-color:var(--gold-soft); }
+.trend-filter select option{ background:#161d2e; color:#e6ecf5; }
+.trend-filter select optgroup{ background:#0f1420; color:var(--gold-soft); font-weight:700; }
 .tf-hint{ color:var(--txt-faint); font-size:12px; }
 
 /* 整体活跃度卡片 */

@@ -6,7 +6,8 @@ window.SECT_THEME = {
   "剑宗":   { key: "jian",     main: "#38bdf8", soft: "#7dd3fc", deep: "#0c4a6e", glow: "rgba(56,189,248,.35)" },
   "七星":   { key: "qixing",   main: "#a78bfa", soft: "#c4b5fd", deep: "#4c1d95", glow: "rgba(167,139,250,.35)" },
   "五行":   { key: "wuxing",   main: "#f59e0b", soft: "#fcd34d", deep: "#78350f", glow: "rgba(245,158,11,.35)" },
-  "锻玄":   { key: "duanxuan", main: "#f43f5e", soft: "#fb7185", deep: "#881337", glow: "rgba(244,63,94,.35)" }
+  "锻玄":   { key: "duanxuan", main: "#f43f5e", soft: "#fb7185", deep: "#881337", glow: "rgba(244,63,94,.35)" },
+  "随机":   { key: "random",   main: "#e8c479", soft: "#f0d89a", deep: "#5c4a1e", glow: "rgba(232,196,121,.35)" }
 };
 
 window.sectMain = function (sect) {
