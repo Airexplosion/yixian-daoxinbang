@@ -3,122 +3,223 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>宗门大比 · 道心榜 — 弈仙牌</title>
+<title>宗门大比 · 道心榜 — 弈仙牌数据大屏</title>
 <link rel="stylesheet" href="style.css">
 <script src="vendor/echarts.min.js"></script>
 </head>
 <body>
-<div class="bg-aura"></div>
 
-<header class="hero">
-  <div class="hero-inner">
-    <div class="hero-emblem">道</div>
-    <h1 class="hero-title">宗门大比 <span class="sep">·</span> 道心榜</h1>
-    <div class="hero-sub">
-      <span class="chip chip-season">第 <b>10</b> 赛季</span>
-      <span class="chip chip-time" id="gen">更新中…</span>
+<!-- ============ 顶栏 ============ -->
+<header class="topbar">
+  <div class="tb-brand">
+    <div class="tb-logo">道</div>
+    <div>
+      <div class="tb-title">宗门大比 · 道心榜</div>
+      <div class="tb-sub">弈仙牌 · 游戏生态分析大屏</div>
     </div>
-    <p class="hero-note">角色级聚合（去最高分），仅排名分数，无任何个人信息</p>
   </div>
+  <div class="tb-spacer"></div>
+  <span class="tb-chip">赛季 <b id="seasonId">10</b></span>
+  <span class="tb-chip" id="gen">更新中…</span>
+  <span class="tb-chip live"><span class="dot"></span>每 5 分钟自动刷新</span>
 </header>
 
 <main class="wrap">
 
-  <!-- 整体活跃度(场次/场均分,角色级聚合,无玩家个人信息) -->
-  <section class="panel stat-cards" id="overallStats" hidden></section>
+  <!-- ============ KPI 大字条 ============ -->
+  <section class="kpi-row" id="kpiRow"></section>
 
-  <!-- 门派对比块 -->
-  <section class="panel" id="sect-compare-panel">
-    <div class="panel-head">
-      <h2 class="panel-title">门派强弱对比</h2>
-      <p class="panel-desc">每门派 6 角色平均分再取均值</p>
+  <!-- ============ ① 强度梯队 + ② 主榜 ============ -->
+  <section class="zone">
+    <div class="zone-head">
+      <span class="zone-no">1</span>
+      <span class="zone-title">综合排行主榜</span>
+      <span class="zone-desc">去最高分聚合 · 点击表头排序 · 按门派筛选</span>
     </div>
-    <div id="sectBars" class="sect-bars"></div>
-  </section>
-
-  <!-- 综合排行主榜 -->
-  <section class="panel" id="board-panel">
-    <div class="panel-head">
-      <h2 class="panel-title">综合排行主榜</h2>
-      <p class="panel-desc">点击表头按平均 / 总分 / 中位 / 门槛排序</p>
-    </div>
-
-    <div class="filters" id="sectFilter">
-      <button class="filter-btn active" data-sect="all">全部</button>
-      <button class="filter-btn f-jian"  data-sect="剑宗">剑宗</button>
-      <button class="filter-btn f-qixing" data-sect="七星">七星</button>
-      <button class="filter-btn f-wuxing" data-sect="五行">五行</button>
-      <button class="filter-btn f-duanxuan" data-sect="锻玄">锻玄</button>
-    </div>
-
-    <div class="board-scroll">
-      <table id="board">
-        <thead>
-          <tr>
-            <th class="col-rank">#</th>
-            <th class="col-char">角色</th>
-            <th class="num sortable" data-k="avg">平均分<i class="caret"></i></th>
-            <th class="num sortable" data-k="sum">总分<i class="caret"></i></th>
-            <th class="num sortable" data-k="median">中位数<i class="caret"></i></th>
-            <th class="num sortable" data-k="threshold">入榜门槛<i class="caret"></i></th>
-            <th class="num sortable" data-k="games">场次<i class="caret"></i></th>
-            <th class="num sortable" data-k="avgGameScore">场均分<i class="caret"></i></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- 4 图分析 -->
-  <section class="charts-grid">
-    <div class="panel chart-panel">
-      <div class="panel-head"><h2 class="panel-title">道心分分布</h2><p class="panel-desc">各分段人数堆叠（按门派着色）</p></div>
-      <div id="dist" class="chart"></div>
-    </div>
-    <div class="panel chart-panel">
-      <div class="panel-head"><h2 class="panel-title">历史趋势</h2><p class="panel-desc">各门派平均分随赛季变化</p></div>
-      <div id="trend" class="chart"></div>
-    </div>
-    <div class="panel chart-panel">
-      <div class="panel-head"><h2 class="panel-title">门派四维雷达</h2><p class="panel-desc">平均 / 总分 / 中位 / 门槛 归一化</p></div>
-      <div id="radar" class="chart"></div>
-    </div>
-    <div class="panel chart-panel">
-      <div class="panel-head"><h2 class="panel-title">入榜门槛榜</h2><p class="panel-desc">第 100 名分数横向对比</p></div>
-      <div id="threshold" class="chart"></div>
+    <div class="grid">
+      <!-- 主榜 -->
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">综合排行主榜</h3>
+          <p class="panel-desc">点击表头排序 · 去最高分聚合</p>
+          <div class="tb-spacer"></div>
+          <div class="filters" id="sectFilter">
+            <button class="filter-btn active" data-sect="all">全部</button>
+            <button class="filter-btn f-jian"  data-sect="剑宗">剑宗</button>
+            <button class="filter-btn f-qixing" data-sect="七星">七星</button>
+            <button class="filter-btn f-wuxing" data-sect="五行">五行</button>
+            <button class="filter-btn f-duanxuan" data-sect="锻玄">锻玄</button>
+            <button class="filter-btn f-random" data-sect="随机">随机</button>
+          </div>
+        </div>
+        <div class="panel-body tight">
+          <div class="board-scroll">
+            <table id="board">
+              <thead>
+                <tr>
+                  <th class="col-rank">#</th>
+                  <th class="col-char">角色</th>
+                  <th class="num sortable" data-k="avg">均分<i class="caret"></i></th>
+                  <th class="num sortable" data-k="top">天花板<i class="caret"></i></th>
+                  <th class="num sortable" data-k="top10avg">头部<i class="caret"></i></th>
+                  <th class="num sortable" data-k="median">中位<i class="caret"></i></th>
+                  <th class="num sortable" data-k="threshold">门槛<i class="caret"></i></th>
+                  <th class="num sortable" data-k="games">场次<i class="caret"></i></th>
+                  <th class="num sortable" data-k="avgGameScore">场均<i class="caret"></i></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- 单角色趋势:角色筛选器 -->
-  <div class="trend-filter">
-    <span class="tf-label">单角色趋势</span>
-    <select id="trendCharSel"><option value="all">全部角色</option></select>
-    <span class="tf-hint">选一个角色,下方最高分/均分/门槛三张图只看它</span>
-  </div>
-  <!-- 单角色历史趋势(4 图) -->
-  <section class="charts-grid">
-    <div class="panel chart-panel">
-      <div class="panel-head"><h2 class="panel-title">最高分趋势</h2><p class="panel-desc">各角色榜首分数随时间 · 每角色一条线(图例可点选)</p></div>
-      <div id="trendTop" class="chart"></div>
+  <!-- ============ ③ 竞争洞察 ============ -->
+  <section class="zone">
+    <div class="zone-head">
+      <span class="zone-no">2</span>
+      <span class="zone-title">竞争洞察</span>
+      <span class="zone-desc">人气×强度四象限 · 天花板×门槛 · 头部集中度</span>
     </div>
-    <div class="panel chart-panel">
-      <div class="panel-head"><h2 class="panel-title">平均分趋势</h2><p class="panel-desc">各角色去最高分均分随时间</p></div>
-      <div id="trendAvg" class="chart"></div>
+    <div class="grid g-3">
+      <div class="panel span-2">
+        <div class="panel-head">
+          <h3 class="panel-title">人气 × 强度 四象限</h3>
+          <p class="panel-desc">x=累计场次 y=均分 · 中位线分区 · 点带门派色</p>
+        </div>
+        <div class="panel-body tight"><div id="quadrant" class="chart h-420"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">天花板 × 门槛</h3>
+          <p class="panel-desc">x=门槛 y=最高分 · 高手向/平民向</p>
+        </div>
+        <div class="panel-body tight"><div id="ceiling" class="chart h-420"></div></div>
+      </div>
     </div>
-    <div class="panel chart-panel">
-      <div class="panel-head"><h2 class="panel-title">门槛分趋势</h2><p class="panel-desc">各角色第 100 名分数随时间</p></div>
-      <div id="trendThr" class="chart"></div>
+    <div class="grid g-2" style="margin-top:14px">
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">头部集中度</h3>
+          <p class="panel-desc">前10均分 / 整体均分 · 比值越高=大佬越垄断</p>
+        </div>
+        <div class="panel-body tight"><div id="concentration" class="chart h-420"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">入榜门槛榜</h3>
+          <p class="panel-desc">第 100 名分数 · 越高=越卷</p>
+        </div>
+        <div class="panel-body tight"><div id="threshold" class="chart h-420"></div></div>
+      </div>
     </div>
-    <div class="panel chart-panel">
-      <div class="panel-head"><h2 class="panel-title">全榜总分趋势</h2><p class="panel-desc">24 角色总分合计随时间</p></div>
-      <div id="trendSum" class="chart"></div>
+  </section>
+
+  <!-- ============ ④ 门派生态 ============ -->
+  <section class="zone">
+    <div class="zone-head">
+      <span class="zone-no">3</span>
+      <span class="zone-title">门派生态</span>
+      <span class="zone-desc">门派强弱对比 · 四维雷达</span>
+    </div>
+    <div class="grid g-2">
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">门派强弱对比</h3>
+          <p class="panel-desc">每门派 6 角色均分再取均值</p>
+        </div>
+        <div class="panel-body"><div id="sectBars" class="sect-bars"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">门派四维雷达</h3>
+          <p class="panel-desc">均分 / 总分 / 中位 / 门槛 归一化</p>
+        </div>
+        <div class="panel-body tight"><div id="radar" class="chart h-340"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ⑤ 时间动态 ============ -->
+  <section class="zone">
+    <div class="zone-head">
+      <span class="zone-no">4</span>
+      <span class="zone-title">时间动态</span>
+      <span class="zone-desc">崛起/衰落榜 · 历史趋势 · 全榜总分增长</span>
+    </div>
+    <div class="grid g-3">
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">崛起 / 衰落榜</h3>
+          <p class="panel-desc">近期均分斜率 · 涨绿跌红</p>
+        </div>
+        <div class="panel-body"><div class="mover-wrap" id="movers"></div></div>
+      </div>
+      <div class="panel span-2">
+        <div class="panel-head">
+          <h3 class="panel-title">门派均分历史趋势</h3>
+          <p class="panel-desc">各门派平均分随采集时间变化</p>
+        </div>
+        <div class="panel-body tight"><div id="trend" class="chart h-300"></div></div>
+      </div>
+    </div>
+    <div class="grid g-3" style="margin-top:14px">
+      <div class="panel span-2">
+        <div class="panel-head">
+          <h3 class="panel-title">单角色历史趋势</h3>
+          <p class="panel-desc" id="trendMetricDesc">各角色随时间 · 切换指标 / 单选角色</p>
+          <div class="tb-spacer"></div>
+          <div class="trend-tools">
+            <select id="trendMetricSel">
+              <option value="avg">均分</option>
+              <option value="top">最高分</option>
+              <option value="threshold">门槛分</option>
+            </select>
+            <select id="trendCharSel"><option value="all">全部角色</option></select>
+          </div>
+        </div>
+        <div class="panel-body tight"><div id="trendChar" class="chart h-340"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">全榜总分 &amp; 增长</h3>
+          <p class="panel-desc">25 角色总分合计 + 环比 Δ</p>
+        </div>
+        <div class="panel-body tight"><div id="trendSum" class="chart h-340"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ⑥ 分布形态 ============ -->
+  <section class="zone">
+    <div class="zone-head">
+      <span class="zone-no">5</span>
+      <span class="zone-title">分布形态</span>
+      <span class="zone-desc">箱线图对比分布 · 分数段堆叠</span>
+    </div>
+    <div class="grid g-2">
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">分数分布箱线图</h3>
+          <p class="panel-desc">下须门槛 · 箱 p25/中位/p75 · 上须天花板</p>
+        </div>
+        <div class="panel-body tight"><div id="boxplot" class="chart h-420"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">道心分分布</h3>
+          <p class="panel-desc">各分段人数按门派堆叠</p>
+        </div>
+        <div class="panel-body tight"><div id="dist" class="chart h-420"></div></div>
+      </div>
     </div>
   </section>
 
   <footer class="foot">
-    <span>弈仙牌 · 宗门大比道心榜</span>
-    <span class="foot-dim">数据为角色级匿名聚合，去最高分计算 · 仅供观赏</span>
+    <span>弈仙牌 · 宗门大比道心榜数据大屏</span>
+    <span>数据为角色级匿名聚合(去最高分计算)· 无任何个人信息 · 仅供观赏</span>
   </footer>
 
 </main>
