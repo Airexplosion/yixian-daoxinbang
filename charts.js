@@ -320,11 +320,14 @@ window.renderCharts = function (data, getHistory) {
 
       // ---- 全榜总分 + 增长 ----
       if (trendSum) {
+        const counts = snaps.map(s => (s.characters || []).filter(c => c.sum != null).length);
         const totalData = snaps.map(s => {
           const list = (s.characters || []).filter(c => c.sum != null);
           return list.length ? list.reduce((a, c) => a + c.sum, 0) : null;
         });
-        const growth = totalData.map((v, i) => (i === 0 || v == null || totalData[i - 1] == null) ? null : v - totalData[i - 1]);
+        // 相邻快照角色数不同(如随机道心加入致 24→25),那一格增长是阶跃假值,屏蔽
+        const growth = totalData.map((v, i) =>
+          (i === 0 || v == null || totalData[i - 1] == null || counts[i] !== counts[i - 1]) ? null : v - totalData[i - 1]);
         trendSum.setOption({
           grid: { ...grid, top: 24, right: 44 },
           legend: { textStyle: { color: "#cbd5e1", fontSize: 11 }, top: 0, itemWidth: 13, itemHeight: 7, itemGap: 12 },
