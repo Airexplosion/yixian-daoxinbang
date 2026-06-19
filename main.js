@@ -78,16 +78,15 @@ function resolveWindow(hist) {
   const end = Date.now();
   return { startMs: end - span, endMs: end, windowed: true };
 }
-function pickViewSnap(hist, endMs) {            // ≤endMs 的最后一个(定格端)
-  if (endMs == null) return hist[hist.length - 1];
+function hasScores(s) { return !!(s && s.characters && s.characters.some(c => c.avg != null)); }
+function pickViewSnap(hist, endMs) {            // ≤endMs 的最后一个「有效」帧(定格端,跳过全空残缺帧)
   let r = null;
-  for (const s of hist) { const t = tsMs(s); if (t != null && t <= endMs) r = s; }
-  return r;
+  for (const s of hist) { const t = tsMs(s); if ((endMs == null || (t != null && t <= endMs)) && hasScores(s)) r = s; }
+  return r || hist[hist.length - 1];
 }
-function pickBaseSnap(hist, startMs) {          // ≥startMs 的第一个(窗口起点基线)
-  if (startMs == null) return hist[0];
-  for (const s of hist) { const t = tsMs(s); if (t != null && t >= startMs) return s; }
-  return hist[hist.length - 1];
+function pickBaseSnap(hist, startMs) {          // ≥startMs 的第一个「有效」帧(窗口起点基线,跳过全空残缺帧)
+  for (const s of hist) { const t = tsMs(s); if ((startMs == null || (t != null && t >= startMs)) && hasScores(s)) return s; }
+  return hist[0];
 }
 function filterWindow(hist, startMs, endMs) {
   return hist.filter(s => { const t = tsMs(s); if (t == null) return false;
@@ -96,7 +95,14 @@ function filterWindow(hist, startMs, endMs) {
 
 // ============ 应用窗口:重算派生量 + 重渲染全部面板 ============
 function applyWindow() {
-  const hist = (HISTORY && HISTORY.length) ? HISTORY : [DATA];
+  // 历史帧 + 把最新 latest.json 并为「最新帧」(字段最全、最新),避免窗口末取到较旧/残缺归档帧
+  let hist = (HISTORY && HISTORY.length) ? HISTORY.slice() : [];
+  const lastH = hist[hist.length - 1];
+  if (DATA && DATA !== lastH) {
+    const td = tsMs(DATA), tl = lastH ? tsMs(lastH) : null;
+    if (!lastH || td == null || tl == null || td >= tl) hist.push(DATA);
+  }
+  if (!hist.length) hist = [DATA];
   const { startMs, endMs, windowed } = resolveWindow(hist);
   WINDOWED = windowed;
   VIEW = pickViewSnap(hist, endMs) || DATA;
@@ -106,8 +112,8 @@ function applyWindow() {
 
   computeComposite(VIEW.characters);
 
-  // 暴露给 card.js(角色详情卡复用同一窗口的定格/基线)
-  window.VIEW = VIEW; window.BASE = BASE; window.WINDOWED = WINDOWED;
+  // 暴露给 card.js(角色详情卡复用同一窗口的定格/基线/窗口内全部帧)
+  window.VIEW = VIEW; window.BASE = BASE; window.WINDOWED = WINDOWED; window.WIN_HISTORY = WIN_HISTORY;
   if (window.refreshCardIfOpen) window.refreshCardIfOpen();
 
   // 顶栏戳记 + 窗口回显

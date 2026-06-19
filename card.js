@@ -24,11 +24,74 @@
     return i < 0 ? null : i + 1;
   }
 
+  // 名次涨跌箭头:在「窗口两端都有 avg 的真实角色」一致集合内比较名次。
+  // 剔除随机(-1)聚合项 —— 它在窗口起点常无 avg、终点才进榜,会把后面所有人被动挤下一名(满屏 ▼)。
+  function rankArrowHtml(cid) {
+    if (!window.WINDOWED || !window.BASE || !window.VIEW) return "";
+    const V = window.VIEW, B = window.BASE;
+    const set = new Set(
+      V.characters
+        .filter(c => c.avg != null && String(c.charId) !== "-1")
+        .map(c => String(c.charId))
+        .filter(id => { const bc = B.characters.find(c => String(c.charId) === id); return bc && bc.avg != null; })
+    );
+    if (!set.has(String(cid))) return "";
+    const rankIn = snap => {
+      const list = snap.characters.filter(c => set.has(String(c.charId))).sort((a, b) => b.avg - a.avg);
+      return list.findIndex(c => String(c.charId) === String(cid)) + 1;   // 必在集合内,>=1
+    };
+    const rv = rankIn(V), rb = rankIn(B);
+    if (rv === rb) return "";
+    const up = rv < rb;   // 名次数变小=上升
+    return `<span class="cd-rankarrow ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${cnNum(Math.abs(rb - rv))}</span>`;
+  }
+
+  // 当前窗口定格下,所有角色按 avg 降序的 id 序(用于方向键切上一名/下一名)
+  function rankedIds() {
+    const snap = window.VIEW;
+    if (!snap || !snap.characters) return [];
+    return snap.characters.filter(c => c.avg != null).sort((a, b) => b.avg - a.avg).map(c => String(c.charId));
+  }
+  // dir=+1 下一名(名次更低) / dir=-1 上一名(名次更高),首尾循环
+  function siblingCard(dir) {
+    const order = rankedIds();
+    if (order.length < 2 || openCid == null) return;
+    const i = order.indexOf(String(openCid));
+    if (i < 0) return;
+    openCard(order[(i + dir + order.length) % order.length]);
+  }
+
   // 窗口态 Δ(取整,0 与缺基线返回 null)
-  function deltaOf(cur, base, k) {
-    if (!window.WINDOWED || !base || base[k] == null || cur[k] == null) return null;
-    const r = Math.round(cur[k] - base[k]);
+  // 窗口内该角色某字段「第一次出现非空值」= 基线(WIN_HISTORY 旧→新)。
+  // 解决:窗口起点帧是旧快照、缺 top/top10avg/avgGameScore/dist 等后加字段时,
+  // 不再返回 null,而是回溯到窗口内首个有该字段的帧作基线 → 这些项也能算出 Δ。
+  function baseVal(cid, k) {
+    const hist = window.WIN_HISTORY;
+    if (!window.WINDOWED || !hist || !hist.length) return null;
+    for (const snap of hist) { const c = charOf(snap, cid); if (c && c[k] != null) return c[k]; }
+    return null;
+  }
+  // Δ = 窗口末值 − 窗口内该字段首个有效值
+  function deltaOf(cur, cid, k, dp) {
+    if (!window.WINDOWED || cur[k] == null) return null;
+    const b = baseVal(cid, k);
+    if (b == null) return null;
+    const raw = cur[k] - b;
+    const r = dp ? Math.round(raw * 10) / 10 : Math.round(raw);
     return r === 0 ? null : r;
+  }
+  // 分段人数基线:窗口内该角色首个含 dist 的帧
+  function tierBaseChar(cid) {
+    const hist = window.WIN_HISTORY;
+    if (!window.WINDOWED || !hist || !hist.length) return null;
+    for (const snap of hist) { const c = charOf(snap, cid); if (c && c.dist) return c; }
+    return null;
+  }
+  function tierDelta(cur, cid, X) {
+    const b = tierBaseChar(cid);
+    if (!b) return null;
+    const d = tierCount(cur, X) - tierCount(b, X);
+    return d === 0 ? null : d;
   }
   function dBadge(d) {
     if (d == null) return "";
@@ -60,10 +123,11 @@
     const t = Math.floor(n / 10), o = n % 10;
     return CN[t] + "十" + (o ? CN[o] : "");
   }
-  // 分数段汉字阈值(古风:萬/千)
+  // 分数段汉字阈值(古风:萬/千)。萬分顶置居中突出;三千即入榜门槛,不展示。
+  const TIER_TOP = { v: 10000, cn: "萬" };
   const TIERS = [
-    { v: 10000, cn: "萬" }, { v: 8000, cn: "八千" }, { v: 6000, cn: "六千" },
-    { v: 5000, cn: "五千" }, { v: 4000, cn: "四千" }, { v: 3000, cn: "三千" }
+    { v: 8000, cn: "八千" }, { v: 6000, cn: "六千" },
+    { v: 5000, cn: "五千" }, { v: 4000, cn: "四千" }
   ];
 
   function ensureOverlay() {
@@ -71,7 +135,12 @@
     overlay = document.createElement("div");
     overlay.className = "card-overlay";
     overlay.innerHTML = `<div class="card-box"><button class="card-close" title="关闭">×</button>
-      <div class="card-left"></div><div class="card-right"></div></div>`;
+      <div class="card-left"></div><div class="card-right"></div>
+      <div class="card-navhint">
+        <span class="nh-prev"><b>←</b> <i></i></span>
+        <span class="nh-mid">方向键切换 · Esc 退出</span>
+        <span class="nh-next"><i></i> <b>→</b></span>
+      </div></div>`;
     document.body.appendChild(overlay);
     overlay.addEventListener("click", e => { if (e.target === overlay) closeCard(); });
     overlay.querySelector(".card-close").addEventListener("click", closeCard);
@@ -87,24 +156,20 @@
   function render(cid) {
     const cur = charOf(window.VIEW, cid);
     if (!cur) return false;
-    const base = charOf(window.BASE, cid);
     const theme = (window.SECT_THEME || {})[cur.sect] || { main: "#94a3b8", key: "random", glow: "rgba(148,163,184,.3)" };
     const box = overlay.querySelector(".card-box");
     box.className = `card-box sect-${theme.key}`;
     box.style.setProperty("--sect", theme.main);
     box.style.setProperty("--sect-glow", theme.glow);
 
-    // 排名 + 升降(汉字)
+    // 排名(与主榜一致,含随机) + 升降箭头(剔除随机污染,真实角色一致集合内比较)
     const rank = rankByAvg(window.VIEW, cid);
-    const rankBase = window.WINDOWED ? rankByAvg(window.BASE, cid) : null;
-    let arrow = "";
-    if (rank != null && rankBase != null && rankBase !== rank) {
-      const up = rank < rankBase;                 // 名次数变小=上升
-      arrow = `<span class="cd-rankarrow ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${cnNum(rankBase - rank)}</span>`;
-    }
+    const arrow = rankArrowHtml(cid);
 
+    const topTierHtml =
+      `<div class="cd-tier-top"><span class="ct-th">${TIER_TOP.cn}</span><span class="ct-n">${tierCount(cur, TIER_TOP.v)}<i>人</i></span>${dBadge(tierDelta(cur, cid, TIER_TOP.v))}</div>`;
     const tierHtml = TIERS.map(t =>
-      `<div class="cd-tier"><span class="ct-th">${t.cn}</span><span class="ct-dots"></span><span class="ct-n">${tierCount(cur, t.v)}<i>人</i></span></div>`
+      `<div class="cd-tier"><span class="ct-th">${t.cn}</span><span class="ct-dots"></span><span class="ct-n">${tierCount(cur, t.v)}<i>人</i></span>${dBadge(tierDelta(cur, cid, t.v))}</div>`
     ).join("");
 
     overlay.querySelector(".card-left").innerHTML = `
@@ -113,15 +178,16 @@
         <div class="cd-rank">
           <span class="cd-rnum">第<b>${rank != null ? cnNum(rank) : "—"}</b>位</span>${arrow}
         </div>
-        <div class="cd-rule"><i class="cd-cloud">◆</i></div>
+        <div class="cd-rule"><i class="cd-cloud"></i></div>
         <div class="cd-stats">
-          ${statRow("顶分", F0(cur.top), deltaOf(cur, base, "top"))}
-          ${statRow("前十均分", F0(cur.top10avg), null)}
-          ${statRow("去榜一均分", F0(cur.avg), deltaOf(cur, base, "avg"))}
-          ${statRow("场均分", F1(cur.avgGameScore), null)}
-          ${statRow("入榜门槛", F0(cur.threshold), deltaOf(cur, base, "threshold"))}
+          ${statRow("顶分", F0(cur.top), deltaOf(cur, cid, "top"))}
+          ${statRow("前十均分", F0(cur.top10avg), deltaOf(cur, cid, "top10avg"))}
+          ${statRow("去榜一均分", F0(cur.avg), deltaOf(cur, cid, "avg"))}
+          ${statRow("场均分", F1(cur.avgGameScore), deltaOf(cur, cid, "avgGameScore", 1))}
+          ${statRow("入榜门槛", F0(cur.threshold), deltaOf(cur, cid, "threshold"))}
         </div>
         <div class="cd-seg-h"><span>分段</span></div>
+        ${topTierHtml}
         <div class="cd-tiers">${tierHtml}</div>
         <div class="cd-stamp">${SEAL[cur.sect] || "·"}</div>
       </div>`;
@@ -152,7 +218,37 @@
     } else if (window.unmountSpine) {
       window.unmountSpine();
     }
+
+    // 底部切换提示:显示上一名/下一名姓名
+    const order = rankedIds();
+    const oi = order.indexOf(String(cid));
+    const phName = overlay.querySelector(".nh-prev i");
+    const nhName = overlay.querySelector(".nh-next i");
+    if (oi >= 0 && order.length > 1) {
+      const pc = charOf(window.VIEW, order[(oi - 1 + order.length) % order.length]);
+      const nc = charOf(window.VIEW, order[(oi + 1) % order.length]);
+      if (phName) phName.textContent = pc ? pc.name : "";
+      if (nhName) nhName.textContent = nc ? nc.name : "";
+    } else {
+      if (phName) phName.textContent = "";
+      if (nhName) nhName.textContent = "";
+    }
+
+    fitBoard(); setTimeout(fitBoard, 250);   // 大屏下榜文跟随放大(字体换算后再校一次)
     return true;
+  }
+
+  // 大屏下榜文跟随放大:按左栏实际尺寸把宣纸榜文整体等比 scale(字/间距/边框同步),封顶 1.7×
+  function fitBoard() {
+    if (!overlay) return;
+    const board = overlay.querySelector(".cd-board");
+    const left = overlay.querySelector(".card-left");
+    if (!board || !left) return;
+    board.style.transform = "none";
+    const bw = board.offsetWidth, bh = board.offsetHeight;
+    if (!bw || !bh) return;
+    const s = Math.max(1, Math.min(left.clientWidth * 0.86 / bw, left.clientHeight * 0.9 / bh, 1.7));
+    board.style.transform = "scale(" + s.toFixed(3) + ")";
   }
 
   function openCard(cid) {
@@ -179,5 +275,14 @@
     const el = e.target.closest("[data-cid]");
     if (el) { e.preventDefault(); openCard(el.dataset.cid); }
   });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") closeCard(); });
+  const tuning = /[?&]tune\b/.test(location.search);   // ?tune 时方向键留给立绘调参
+  document.addEventListener("keydown", e => {
+    if (!overlay || !overlay.classList.contains("show")) return;
+    if (e.key === "Escape") { closeCard(); return; }
+    if (tuning) return;
+    if (e.key === "ArrowRight") { e.preventDefault(); siblingCard(1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); siblingCard(-1); }
+  });
+  // 窗口尺寸变化时,榜文重新按左栏大小等比放大
+  window.addEventListener("resize", () => { if (overlay && overlay.classList.contains("show")) fitBoard(); });
 })();

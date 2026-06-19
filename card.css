@@ -4,23 +4,37 @@
    =================================================================== */
 .card-overlay{
   position:fixed; inset:0; z-index:200;
-  display:flex; align-items:center; justify-content:center; padding:30px;
-  background:rgba(6,9,14,.72); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center; padding:0;
+  background:rgba(6,9,14,.82); backdrop-filter:blur(8px);
   opacity:0; visibility:hidden; transition:opacity .22s ease, visibility .22s;
 }
 .card-overlay.show{ opacity:1; visibility:visible; }
 
+/* 全屏查看:卡片铺满视口 */
 .card-box{
   --sect:#38bdf8; --sect-glow:rgba(56,189,248,.35);
-  position:relative; display:grid; grid-template-columns:minmax(320px,42%) 1fr;
-  width:min(1040px,94vw); height:min(600px,86vh);
-  border-radius:16px; overflow:hidden;
-  border:1px solid rgba(255,255,255,.14);
-  box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 0 1px var(--sect-glow), 0 0 60px -10px var(--sect-glow);
-  transform:scale(.96); transition:transform .22s cubic-bezier(.22,1,.36,1);
+  position:relative; display:grid; grid-template-columns:minmax(440px,42%) 1fr;
+  width:100vw; height:100vh;
+  border-radius:0; overflow:hidden; border:none;
+  transform:scale(.985); transition:transform .26s cubic-bezier(.22,1,.36,1);
   background:#0e1622;
 }
 .card-overlay.show .card-box{ transform:scale(1); }
+
+/* 左右切换提示(全屏底部) */
+.card-navhint{
+  display:none;   /* 提示条隐藏(方向键切换仍生效) */
+  position:absolute; left:50%; bottom:18px; transform:translateX(-50%); z-index:6;
+  align-items:center; gap:18px; pointer-events:none;
+  font-family:"LXGW WenKai","Kaiti SC","KaiTi",serif;
+  font-size:13px; color:rgba(255,255,255,.5); letter-spacing:.04em; white-space:nowrap;
+  background:rgba(0,0,0,.4); padding:7px 18px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(4px);
+}
+.card-navhint b{ color:rgba(255,255,255,.92); font-weight:700; }
+.card-navhint i{ font-style:normal; color:rgba(255,255,255,.74); }
+.card-navhint .nh-mid{ font-size:11.5px; opacity:.62; letter-spacing:.12em; }
+.card-navhint .nh-prev i:empty, .card-navhint .nh-next i:empty{ display:none; }
 
 .card-close{
   position:absolute; top:12px; right:14px; z-index:6;
@@ -31,79 +45,115 @@
 }
 .card-close:hover{ background:rgba(0,0,0,.65); border-color:#fff; }
 
-/* ============ 左:道心榜 榜文(宣纸 · 楷书 · 朱砂) ============ */
+/* ============ 左:道心榜 榜文(青绫裱立轴 · 宣纸 · 毛笔 · 朱砂) ============ */
 .card-left{
-  --paper:#e9dec5; --paper-hi:#f3ebd6; --paper-lo:#dccaa4;
-  --ink:#2b2317; --ink-soft:#6f6049; --cinnabar:#9d2933; --gold:#a8842f; --jade:#3f6b4e;
-  --kai:"Kaiti SC","STKaiti","KaiTi","楷体","Noto Serif SC",serif;
-  --song:"Songti SC","STSong","Noto Serif SC","SimSun","宋体",serif;
-  position:relative; padding:20px; color:var(--ink);
-  display:flex; flex-direction:column;
+  --paper:#ece0c1; --paper-hi:#f6efd7; --paper-lo:#dcc99c;
+  --ink:#2b2317; --ink-soft:#6a5b43; --cinnabar:#9d2933; --gold:#a8842f; --jade:#3f6b4e; --zhe:#7c4d34;
+  --kai:"Ma Shan Zheng","ZCOOL XiaoWei","Kaiti SC","KaiTi","楷体",serif;
+  --song:"ZCOOL XiaoWei","Songti SC","STSong","SimSun","宋体",serif;
+  --brush:"Ma Shan Zheng","Kaiti SC","KaiTi","楷体",serif;
+  position:relative; padding:46px 40px; color:var(--ink);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  /* 青绫裱:深黛青织锦绫边 */
+  background:
+    repeating-linear-gradient(45deg, rgba(0,0,0,.05) 0 4px, transparent 4px 9px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.022) 0 4px, transparent 4px 9px),
+    radial-gradient(140% 100% at 50% 50%, #335157, #213b42 68%, #182f37);
+}
+.card-left::before{   /* 绫边描金双线 */
+  content:""; position:absolute; inset:18px; pointer-events:none; z-index:0;
+  border:1px solid rgba(176,142,74,.55);
+  box-shadow:inset 0 0 0 3px rgba(0,0,0,.16), inset 0 0 22px rgba(0,0,0,.25);
+}
+
+/* 宣纸榜文:浮起于绫边之上 */
+.cd-board{
+  position:relative; z-index:1; display:flex; flex-direction:column; align-items:stretch;
+  width:100%; max-width:512px; max-height:100%;
+  padding:38px 36px 60px;
+  color:var(--ink);
   background:
     radial-gradient(130% 70% at 50% -8%, var(--paper-hi), transparent 60%),
-    radial-gradient(120% 90% at 50% 115%, var(--paper-lo), transparent 55%),
-    linear-gradient(180deg, var(--paper), #e3d4b2);
+    radial-gradient(120% 95% at 50% 116%, var(--paper-lo), transparent 58%),
+    linear-gradient(180deg, var(--paper), #e1d1a8);
+  border:1px solid var(--zhe);
+  box-shadow:
+    inset 0 0 0 5px rgba(247,239,215,.5),
+    inset 0 0 0 6px rgba(157,41,51,.42),
+    0 18px 46px rgba(0,0,0,.5),
+    0 2px 0 rgba(0,0,0,.3);
 }
-.card-left::before{   /* 宣纸纤维纹理(极淡) */
-  content:""; position:absolute; inset:0; pointer-events:none; opacity:.45; mix-blend-mode:multiply;
+.cd-board::before{   /* 宣纸纤维纹理(极淡) */
+  content:""; position:absolute; inset:7px; pointer-events:none; opacity:.4; mix-blend-mode:multiply;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
+.cd-board > *{ position:relative; z-index:1; }
 
-/* 榜文双线内框 */
-.cd-board{
-  position:relative; z-index:1; flex:1; display:flex; flex-direction:column;
-  padding:24px 24px 22px;
-  border:1.4px solid var(--gold);
-  box-shadow:inset 0 0 0 4px transparent, inset 0 0 0 5px rgba(168,132,47,.42);
-}
-
+/* 题额:匾额式居中,描金界线相夹 */
 .cd-eyebrow{
-  display:flex; align-items:center; gap:9px;
-  font-family:var(--kai); font-size:14px; letter-spacing:.34em; color:var(--ink-soft);
+  display:flex; align-items:center; justify-content:center; gap:14px;
+  font-family:var(--brush); font-size:31px; line-height:1; letter-spacing:.14em;
+  color:var(--cinnabar); text-shadow:0 1px 0 rgba(255,255,255,.45);
 }
-.cd-eyeseal{
-  width:25px; height:25px; display:grid; place-items:center; border-radius:4px;
-  background:var(--cinnabar); color:#f4e7cf; font-size:15px; font-family:var(--kai);
-  box-shadow:0 1px 3px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,220,180,.3); letter-spacing:0;
+.cd-eyebrow::before, .cd-eyebrow::after{
+  content:""; height:1px; width:36px; background:linear-gradient(90deg, transparent, var(--gold) 75%);
 }
+.cd-eyebrow::after{ transform:scaleX(-1); }
+.cd-eyeseal{ display:none; }   /* 题额内不用小印,门派印移至右下钤印 */
 
-.cd-rank{ display:flex; align-items:flex-end; gap:14px; margin:16px 0 2px; }
-.cd-rnum{ font-family:var(--kai); font-size:26px; color:var(--ink); line-height:.9; }
-.cd-rnum b{ font-size:56px; font-weight:400; color:var(--cinnabar); margin:0 5px;
-  text-shadow:0 1px 0 rgba(255,255,255,.45); }
-.cd-rankarrow{ font-family:var(--kai); font-size:18px; padding-bottom:9px; letter-spacing:.05em; }
+/* 名次 */
+.cd-rank{ display:flex; align-items:flex-end; justify-content:center; gap:14px; margin:20px 0 4px; }
+.cd-rnum{ font-family:var(--brush); font-size:27px; color:var(--ink); line-height:.9; }
+.cd-rnum b{ font-family:var(--brush); font-size:62px; font-weight:400; color:var(--cinnabar); margin:0 7px;
+  text-shadow:0 2px 1px rgba(157,41,51,.22), 0 1px 0 rgba(255,255,255,.4); }
+.cd-rankarrow{ font-family:var(--song); font-size:17px; font-weight:700; padding-bottom:11px; letter-spacing:.05em; }
 .cd-rankarrow.up{ color:var(--cinnabar); } .cd-rankarrow.down{ color:var(--jade); }
 
-.cd-rule{ position:relative; height:1px; margin:14px 2px 18px; background:rgba(168,132,47,.55); }
-.cd-cloud{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  background:var(--paper); padding:0 12px; color:var(--gold); font-style:normal; font-size:13px; }
+/* 鱼尾界饰(古籍版心鱼尾) */
+.cd-rule{ position:relative; height:1px; margin:18px 2px 22px;
+  background:linear-gradient(90deg, transparent, rgba(157,41,51,.5) 18%, rgba(157,41,51,.5) 82%, transparent); }
+.cd-cloud{ position:absolute; left:50%; top:50%; width:26px; height:15px; transform:translate(-50%,-50%);
+  background:var(--cinnabar); box-shadow:0 1px 2px rgba(0,0,0,.22);
+  clip-path:polygon(0 0, 100% 0, 100% 100%, 50% 52%, 0 100%); }   /* 鱼尾 */
 
-.cd-stats{ display:flex; flex-direction:column; gap:13px; }
+.cd-stats{ display:flex; flex-direction:column; gap:14px; }
 .cd-row{ display:flex; align-items:baseline; gap:8px; }
-.cd-label{ font-family:var(--kai); font-size:18px; color:var(--ink-soft); white-space:nowrap; letter-spacing:.04em; }
-.cd-dots{ flex:1; border-bottom:1.5px dotted rgba(110,86,50,.45); transform:translateY(-4px); }
-.cd-value{ font-family:var(--song); font-weight:700; font-size:25px; color:var(--ink);
+.cd-label{ font-family:var(--brush); font-size:20px; color:var(--ink-soft); white-space:nowrap; letter-spacing:.05em; }
+.cd-dots{ flex:1; border-bottom:1.5px dotted rgba(124,77,52,.45); transform:translateY(-5px); }
+.cd-value{ font-family:var(--song); font-weight:700; font-size:26px; color:var(--ink);
   font-variant-numeric:tabular-nums; white-space:nowrap; letter-spacing:.01em; }
 .cd-delta{ font-family:var(--song); font-weight:700; font-size:14px; margin-left:5px; font-variant-numeric:tabular-nums; }
 .cd-delta.up{ color:var(--cinnabar); } .cd-delta.down{ color:var(--jade); }
 
-.cd-seg-h{ position:relative; text-align:center; margin:auto 0 12px; padding-top:18px; }
-.cd-seg-h::before{ content:""; position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(168,132,47,.4); }
-.cd-seg-h span{ position:relative; z-index:1; background:var(--paper); padding:0 13px;
-  font-family:var(--kai); font-size:14px; letter-spacing:.4em; color:var(--ink-soft); }
+.cd-seg-h{ position:relative; text-align:center; margin:30px 0 17px; padding-top:18px; }
+.cd-seg-h::before{ content:""; position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(168,132,47,.45); }
+.cd-seg-h span{ position:relative; z-index:1; background:var(--paper); padding:0 16px;
+  font-family:var(--brush); font-size:18px; letter-spacing:.28em; color:var(--cinnabar); }
 
-.cd-tiers{ display:grid; grid-template-columns:1fr 1fr; gap:10px 22px; }
+/* 萬分:顶置居中,朱砂突出(榜中之巅) */
+.cd-tier-top{ display:flex; align-items:baseline; justify-content:center; gap:12px; margin:0 0 16px; }
+.cd-tier-top .ct-th{ font-family:var(--brush); font-size:29px; color:var(--cinnabar); letter-spacing:.04em;
+  text-shadow:0 1px 0 rgba(255,255,255,.4); }
+.cd-tier-top .ct-n{ font-family:var(--song); font-weight:700; font-size:25px; color:var(--cinnabar);
+  font-variant-numeric:tabular-nums; }
+.cd-tier-top .ct-n i{ font-family:var(--brush); font-size:13px; font-style:normal; font-weight:400; color:var(--ink-soft); margin-left:2px; }
+
+.cd-tiers{ display:grid; grid-template-columns:1fr 1fr; gap:12px 28px; }
 .cd-tier{ display:flex; align-items:baseline; gap:7px; }
-.ct-th{ font-family:var(--kai); font-size:17px; color:var(--ink-soft); white-space:nowrap; }
-.ct-dots{ flex:1; border-bottom:1.5px dotted rgba(110,86,50,.4); transform:translateY(-4px); }
-.ct-n{ font-family:var(--song); font-weight:700; font-size:19px; color:var(--ink); font-variant-numeric:tabular-nums; }
-.ct-n i{ font-family:var(--kai); font-size:11px; font-style:normal; font-weight:400; color:var(--ink-soft); margin-left:1px; }
+.ct-th{ font-family:var(--brush); font-size:19px; color:var(--ink-soft); white-space:nowrap; }
+.ct-dots{ flex:1; border-bottom:1.5px dotted rgba(124,77,52,.4); transform:translateY(-5px); }
+.ct-n{ font-family:var(--song); font-weight:700; font-size:21px; color:var(--ink); font-variant-numeric:tabular-nums; }
+.ct-n i{ font-family:var(--brush); font-size:12px; font-style:normal; font-weight:400; color:var(--ink-soft); margin-left:2px; }
+.cd-tier .cd-delta{ font-size:11.5px; margin-left:3px; }
+.cd-tier-top .cd-delta{ font-size:13px; margin-left:5px; }
 
+/* 门派钤印:朱文方印,盖于右下 */
 .cd-stamp{
-  position:absolute; right:22px; top:20px; width:42px; height:42px; z-index:1;
-  display:grid; place-items:center; font-family:var(--kai); font-size:24px; color:var(--cinnabar);
-  border:2px solid var(--cinnabar); border-radius:5px; opacity:.5; transform:rotate(-7deg); pointer-events:none;
-  box-shadow:inset 0 0 0 1px rgba(157,41,51,.4);
+  position:absolute; right:16px; bottom:13px; width:44px; height:44px; z-index:2;
+  display:grid; place-items:center; font-family:var(--brush); font-size:25px; color:#b3322f;
+  border:2.5px solid #b3322f; border-radius:4px; opacity:.6; transform:rotate(-6deg); pointer-events:none;
+  box-shadow:inset 0 0 0 1px rgba(157,41,51,.5), inset 0 0 7px rgba(157,41,51,.18);
+  text-shadow:0 0 1px rgba(157,41,51,.4);
 }
 
 /* ============ 右:立绘 + 名牌 ============ */
@@ -169,10 +219,13 @@
   font-family:"STKaiti","KaiTi","Noto Serif SC",serif;
 }
 
-/* ============ 响应式:窄屏上下堆叠 ============ */
+/* ============ 响应式:窄屏全屏上下堆叠 ============ */
 @media (max-width:760px){
-  .card-box{ grid-template-columns:1fr; grid-template-rows:auto 260px; height:min(86vh,720px); width:96vw; }
-  .card-left{ border-right:none; border-bottom:2px solid rgba(255,255,255,.5); padding:20px; gap:12px; }
-  .cd-rnum{ font-size:27px; } .cd-value{ font-size:22px; } .cd-label{ font-size:16px; min-width:92px; }
-  .card-right{ min-height:240px; }
+  .card-box{ grid-template-columns:1fr; grid-template-rows:minmax(0,44%) 1fr; height:100vh; width:100vw; }
+  .card-left{ align-items:center; border-right:none; border-bottom:2px solid rgba(255,255,255,.5); padding:16px; }
+  .cd-board{ max-width:none; padding:16px 18px; }
+  .cd-rnum{ font-size:27px; } .cd-value{ font-size:22px; } .cd-label{ font-size:16px; }
+  .card-right{ min-height:0; }
+  .card-navhint{ font-size:11.5px; gap:10px; bottom:10px; padding:5px 12px; }
+  .card-navhint .nh-mid{ display:none; }
 }

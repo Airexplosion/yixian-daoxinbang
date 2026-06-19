@@ -10,25 +10,26 @@
 
   // 每角色框选覆盖(默认 cover 居中;偏离的逐个微调)。scale>1 角色更大,dx/dy 以视口为单位平移(正=右/上)。
   window.SPINE_FIT = Object.assign({
-    "1000002": { scale: 1.0,  dx: 0.18, dy: 0.12 },  // 炎雪:左下
+    "1000002": { scale: 1.0,  dx: 0.18, dy: 0.17 },  // 炎雪:左下,下移一些
     "1000003": { scale: 1.4,  dx: 0,    dy: 0.02 },  // 龙瑶:放大
-    "1000004": { scale: 1.25, dx: 0,    dy: 0.1  },  // 林小月:放大下移
+    "1000004": { scale: 1.25, dx: 0,    dy: 0.13 },  // 林小月:放大下移(再向下一点点)
     "1000005": { scale: 1.25, dx: -0.12, dy: 0.12 }, // 陆剑心:放大右移,下移
-    "1000006": { scale: 1.2,  dx: 0.1,  dy: 0    },  // 黎承云:放大左移
-    "2000002": { scale: 1.3,  dx: 0,    dy: 0    },  // 炎尘:放大
-    "2000003": { scale: 1.3,  dx: 0,    dy: 0    },  // 曜灵:放大
-    "2000004": { scale: 1.28, dx: 0,    dy: 0.09 },  // 姜袭明:放大,上移
-    "2000005": { scale: 1.25, dx: 0.06, dy: 0.12 },  // 吴策:放大,下+左
+    "1000006": { scale: 1.2,  dx: 0.1,  dy: 0.05 },  // 黎承云:放大左移,下移一些
+    "2000002": { scale: 1.2,  dx: 0,    dy: 0    },  // 炎尘:缩小一点
+    "2000003": { scale: 1.3,  dx: 0,    dy: 0.05 },  // 曜灵:放大,下移一些
+    "2000004": { scale: 1.18, dx: 0,    dy: 0.14 },  // 姜袭明:缩小一点,下移一些
+    "2000005": { scale: 1.25, dx: 0.06, dy: 0.17 },  // 吴策:放大,下移一些+左
     "2000006": { scale: 1.08, dx: 0.32, dy: 0    },  // 风绪:左移
-    "3000002": { scale: 1.25, dx: 0.06, dy: 0.0  },  // 杜伶鸳:放大,上移
+    "3000001": { scale: 0.93, dx: 0,    dy: 0    },  // 吾行之:缩小一点点
+    "3000002": { scale: 1.25, dx: 0.06, dy: 0.05 },  // 杜伶鸳:放大,下移一些
     "3000003": { scale: 1.25, dx: 0,    dy: 0    },  // 花沁蕊(合成立绘):放大
-    "3000004": { scale: 1.3,  dx: 0,    dy: 0    },  // 慕虎:放大
-    "3000005": { scale: 1.2,  dx: -0.1, dy: 0    },  // 南宫生(合成):放大,右移
+    "3000004": { scale: 1.18, dx: 0,    dy: 0    },  // 慕虎:缩小一些
+    "3000005": { scale: 1.2,  dx: -0.1, dy: 0.05 },  // 南宫生(合成):放大,右移,下移一些
     "3000006": { scale: 1.25, dx: 0.34, dy: 0.08 },  // 祁忘忧:放大,下+左
-    "4000001": { scale: 1.2,  dx: 0.12, dy: 0.0  },  // 小布(合成):放大左移,下移一点
-    "4000002": { scale: 1.25, dx: 0,    dy: 0    },  // 屠馗:放大
-    "4000003": { scale: 1.25, dx: 0.12, dy: 0    },  // 叶冥冥:放大左移
-    "4000004": { scale: 1.3,  dx: 0,    dy: 0.1  },  // 姬方生(合成):放大,上移不少
+    "4000001": { scale: 1.2,  dx: 0.18, dy: 0.0  },  // 小布(合成):放大左移(再往左一些),下移一点
+    "4000002": { scale: 1.18, dx: 0,    dy: 0    },  // 屠馗:缩小一点点
+    "4000003": { scale: 1.25, dx: 0.12, dy: 0.05 },  // 叶冥冥:放大左移,下移一些
+    "4000004": { scale: 1.15, dx: 0,    dy: 0.24 },  // 姬方生(合成):整体缩小,下移更多
     "4000005": { scale: 1.25, dx: -0.15, dy: 0.1 },  // 李㵘:下+左一点
     "4000006": { scale: 1.2,  dx: 0.08, dy: 0.04 },  // 聆羽:放大
   }, window.SPINE_FIT || {});
@@ -42,6 +43,10 @@
   // 实时微调状态(?tune 时启用);仅 ?tune 时才并入 localStorage,避免污染线上 baked 值
   const TUNE = { on: /(?:\?|&)tune\b/.test(location.search), cid: null, fit: null, readout: null };
   if (TUNE.on) { try { Object.assign(window.SPINE_FIT, JSON.parse(localStorage.getItem("spineFit") || "{}")); } catch (e) {} }
+
+  // 全屏跟随放大:立绘整体在 cover 基础上再放大(向取景中心 zoom in),裁掉多余背景、主体填满大画面。
+  // 调高=更满更大;调低=更松。各角色已调好的 SPINE_FIT 比例不变,这里统一加成。
+  const FS_ZOOM = 1.22;
 
   // 分层合成的角色:层数 N(spine/<cid>/L0..L{N-1},由后到前叠加渲染)。
   const COMPOSITE_LAYERS = { "1000002": 2, "3000003": 2, "3000005": 3, "4000001": 2, "4000004": 3 };  // 炎雪/花沁蕊/南宫生/小布/姬方生
@@ -152,7 +157,8 @@
       if (bAspect > aspect) { baseVH = b.h; baseVW = baseVH * aspect; }
       else { baseVW = b.w; baseVH = baseVW / aspect; }
       const fit = (TUNE.on && TUNE.cid === self.cid && TUNE.fit) ? TUNE.fit : fitOf(self.cid);
-      const vw = baseVW / fit.scale, vh = baseVH / fit.scale;
+      const z = fit.scale * FS_ZOOM;
+      const vw = baseVW / z, vh = baseVH / z;
       const cam = renderer.camera;
       cam.position.x = b.x + b.w / 2 + fit.dx * vw;
       cam.position.y = b.y + b.h / 2 + fit.dy * vh;
