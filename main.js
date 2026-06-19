@@ -1,9 +1,15 @@
 // ===================================================================
 //  宗门大比 · 道心榜 数据大屏 — 主逻辑
-//  数据加载 / KPI / 强度梯队 / 主榜 / 门派横条 / 崛起衰落榜 / 趋势筛选
+//  数据加载 / 时间区间 / KPI / 主榜(+Δ) / 门派横条 / 崛起衰落 / 本段变化总览 / 趋势筛选
 // ===================================================================
-let DATA = null;
-let HISTORY = null;            // 历史快照(升序),供崛起榜&趋势复用,只拉一次
+let DATA = null;               // latest.json(最新快照),默认/兜底
+let HISTORY = null;            // 历史快照(升序),只拉一次,供趋势/崛起/窗口复用
+let VIEW = null;               // 当前定格端快照(窗口末) —— 所有快照态面板的数据源
+let BASE = null;               // 当前窗口起点基线快照(算 Δ 用)
+let WIN_HISTORY = [];          // 裁剪到窗口的历史子集 —— 趋势/崛起/总览用
+let WINDOWED = false;          // 是否选了真实窗口(非"全部")
+let WIN = { preset: "all", startMs: null, endMs: null };  // 窗口状态
+
 let sortKey = "avg";
 let sortDir = -1;              // -1 降序, 1 升序
 let activeSect = "all";
@@ -13,6 +19,21 @@ const FMT0 = n => (n == null ? "-" : Math.round(Number(n)).toLocaleString("zh-CN
 const bust = url => url + (url.includes("?") ? "&" : "?") + "_=" + Date.now();
 const avaUrl = id => `avatars/${id}.png`;
 const onErrAva = `this.style.visibility='hidden'`;
+const p2 = n => String(n).padStart(2, "0");
+const tsMs = snap => { const d = new Date(snap.generatedAt); return isNaN(d) ? null : d.getTime(); };
+const fmtStamp = iso => {
+  const d = new Date(iso);
+  return isNaN(d) ? iso
+    : `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+};
+const fmtShort = iso => {
+  const d = new Date(iso);
+  return isNaN(d) ? iso : `${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+};
+const toLocalInput = ms => {   // epoch ms → "YYYY-MM-DDTHH:mm"(datetime-local 本地墙钟)
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`;
+};
 
 async function load() {
   try {
@@ -24,27 +45,14 @@ async function load() {
     return;
   }
 
-  // 时间戳 + 赛季
-  const d = new Date(DATA.generatedAt);
-  const stamp = isNaN(d) ? DATA.generatedAt
-    : `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
-  document.getElementById("gen").textContent = "更新于 " + stamp;
-  if (DATA.seasonId != null) document.getElementById("seasonId").textContent = DATA.seasonId;
-
-  computeComposite(DATA.characters);   // 给每个角色挂 _score / _tier
-  renderKPIs();
-  renderSectBars();
-  renderBoard();
-  bindHeaders();
-
-  if (window.renderCharts) window.renderCharts(DATA, getHistory);
+  applyWindow();                       // 先用 latest 渲染(历史未到时窗口=单点)
   setupTrendFilter();
 
-  // 崛起/衰落榜依赖历史
-  getHistory().then(renderMovers);
+  getHistory().then(() => {            // 历史到位后重算窗口(Δ/趋势/崛起/总览才完整)
+    syncCustomInputsDefault();
+    applyWindow();
+  });
 }
-
-const p2 = n => String(n).padStart(2, "0");
 
 // 历史快照只拉一次,后续复用(charts.js 也通过 getHistory 共享)
 function getHistory() {
@@ -59,6 +67,76 @@ function getHistory() {
       return HISTORY;
     })
     .catch(() => { HISTORY = []; return HISTORY; });
+}
+
+// ============ 时间区间:解析窗口 + 选定格端/基线/裁剪 ============
+function resolveWindow(hist) {
+  // 返回 {startMs, endMs, windowed}; null 端表示开区间(不限)
+  if (WIN.preset === "all") return { startMs: null, endMs: null, windowed: false };
+  if (WIN.preset === "custom") return { startMs: WIN.startMs, endMs: WIN.endMs, windowed: true };
+  const span = { "24h": 864e5, "3d": 3 * 864e5, "7d": 7 * 864e5 }[WIN.preset];
+  const end = Date.now();
+  return { startMs: end - span, endMs: end, windowed: true };
+}
+function pickViewSnap(hist, endMs) {            // ≤endMs 的最后一个(定格端)
+  if (endMs == null) return hist[hist.length - 1];
+  let r = null;
+  for (const s of hist) { const t = tsMs(s); if (t != null && t <= endMs) r = s; }
+  return r;
+}
+function pickBaseSnap(hist, startMs) {          // ≥startMs 的第一个(窗口起点基线)
+  if (startMs == null) return hist[0];
+  for (const s of hist) { const t = tsMs(s); if (t != null && t >= startMs) return s; }
+  return hist[hist.length - 1];
+}
+function filterWindow(hist, startMs, endMs) {
+  return hist.filter(s => { const t = tsMs(s); if (t == null) return false;
+    return (startMs == null || t >= startMs) && (endMs == null || t <= endMs); });
+}
+
+// ============ 应用窗口:重算派生量 + 重渲染全部面板 ============
+function applyWindow() {
+  const hist = (HISTORY && HISTORY.length) ? HISTORY : [DATA];
+  const { startMs, endMs, windowed } = resolveWindow(hist);
+  WINDOWED = windowed;
+  VIEW = pickViewSnap(hist, endMs) || DATA;
+  BASE = pickBaseSnap(hist, startMs) || VIEW;
+  WIN_HISTORY = filterWindow(hist, startMs, endMs);
+  if (!WIN_HISTORY.length) WIN_HISTORY = [VIEW];
+
+  computeComposite(VIEW.characters);
+
+  // 暴露给 card.js(角色详情卡复用同一窗口的定格/基线)
+  window.VIEW = VIEW; window.BASE = BASE; window.WINDOWED = WINDOWED;
+  if (window.refreshCardIfOpen) window.refreshCardIfOpen();
+
+  // 顶栏戳记 + 窗口回显
+  document.getElementById("gen").textContent =
+    (WINDOWED ? "定格于 " : "更新于 ") + fmtStamp(VIEW.generatedAt);
+  if (VIEW.seasonId != null) document.getElementById("seasonId").textContent = VIEW.seasonId;
+  renderRangeEcho(startMs, endMs);
+
+  renderKPIs();
+  renderSectBars();
+  renderBoard();
+  renderChangeOverview();
+  renderMovers(WIN_HISTORY);
+
+  if (window.renderCharts) window.renderCharts(VIEW, WIN_HISTORY, BASE);
+}
+
+function renderRangeEcho(startMs, endMs) {
+  const el = document.getElementById("rbEcho");
+  if (!el) return;
+  if (!WINDOWED) { el.textContent = `全部 · ${WIN_HISTORY.length} 个快照`; return; }
+  const a = startMs != null ? fmtShort(new Date(startMs).toISOString()) : "起";
+  const b = fmtStamp(VIEW.generatedAt);
+  el.textContent = `${a} → ${b} · ${WIN_HISTORY.length} 个快照`;
+}
+
+// 基线快照里同角色的字段(Δ 用)
+function baseCharOf(charId) {
+  return BASE && BASE.characters ? BASE.characters.find(c => c.charId === charId) : null;
 }
 
 // ---------- 综合评分: avg / top10avg / threshold 各归一化后加权 ----------
@@ -88,27 +166,46 @@ function computeComposite(chars) {
 
 // ---------- KPI 大字条 ----------
 function renderKPIs() {
-  const chars = DATA.characters.filter(c => c.avg != null);
-  const g = DATA.gameStats || {};
+  const chars = VIEW.characters.filter(c => c.avg != null);
+  const g = VIEW.gameStats || {};
+  const gBase = (BASE && BASE.gameStats) || {};
   const strongest = chars.reduce((a, b) => (b._score > (a?._score ?? -1) ? b : a), null);
-  const hottest   = chars.reduce((a, b) => ((b.games ?? 0) > (a?.games ?? -1) ? b : a), null);
   const toughest  = chars.reduce((a, b) => ((b.threshold ?? 0) > (a?.threshold ?? -1) ? b : a), null);
 
-  const charChip = (c) => c
-    ? `<img class="kpi-ava" src="${avaUrl(c.charId)}" alt="" loading="lazy" onerror="${onErrAva}"> ${c.name}`
-    : "-";
+  // 场次/活跃依赖较晚加入的字段;定格到早期快照可能没有 → 优雅降级为"无数据"
+  const hasGames = g.totalGames != null;          // 该快照是否有场次统计
+  const winTotal = (g.totalGames ?? 0) - (gBase.totalGames ?? 0);
+
+  // 最热:窗口态看"本段场次增量"最大,否则累计场次最大;无场次数据则不取
+  const winGames = c => (c.games ?? 0) - ((baseCharOf(c.charId) || {}).games ?? 0);
+  const hotMetric = c => WINDOWED ? winGames(c) : (c.games ?? 0);
+  const hottest = hasGames
+    ? chars.reduce((a, b) => (hotMetric(b) > (a ? hotMetric(a) : -1) ? b : a), null)
+    : null;
+  const hotVal = hottest ? hotMetric(hottest) : 0;
+
+  // 场次卡
+  let gamesCard;
+  if (!hasGames) gamesCard = { cap: WINDOWED ? "本段场次" : "累计总场次", val: "—", sub: "该时段无场次数据" };
+  else if (WINDOWED) gamesCard = { cap: "本段场次", val: FMT0(winTotal), unit: "场", sub: `累计 ${FMT0(g.totalGames)} 场` };
+  else gamesCard = { cap: "累计总场次", val: FMT0(g.totalGames), unit: "场", sub: `场均 ${g.overallAvgGameScore ?? "-"} 分` };
+
+  // 最热卡(窗口内若无人开局,降级)
+  const hotCard = (!hottest || (WINDOWED && hotVal <= 0))
+    ? { cap: WINDOWED ? "本段最热" : "最热角色", val: "—", sub: hasGames ? "本段无对局" : "该时段无场次数据" }
+    : { cap: WINDOWED ? "本段最热" : "最热角色", val: hottest.name, ava: hottest, small: true,
+        sub: WINDOWED ? `本段 ${FMT0(hotVal)} 场 · ${hottest.sect}` : `累计 ${FMT0(hottest.games)} 场 · ${hottest.sect}` };
 
   const cards = [
     { cap: "最强角色", accent: "var(--duanxuan)", val: strongest ? strongest.name : "-",
       sub: strongest ? `综合分 ${strongest._score} · ${strongest.sect}` : "", ava: strongest, small: true },
-    { cap: "最热角色", accent: "var(--jian)", val: hottest ? hottest.name : "-",
-      sub: hottest ? `累计 ${FMT0(hottest.games)} 场 · ${hottest.sect}` : "", ava: hottest, small: true },
+    { cap: hotCard.cap, accent: "var(--jian)", val: hotCard.val, sub: hotCard.sub, ava: hotCard.ava, small: true },
     { cap: "最卷角色", accent: "var(--wuxing)", val: toughest ? toughest.name : "-",
       sub: toughest ? `门槛 ${FMT0(toughest.threshold)} · ${toughest.sect}` : "", ava: toughest, small: true },
-    { cap: "累计总场次", accent: "var(--qixing)", val: FMT0(g.totalGames), unit: "场",
-      sub: `场均 ${g.overallAvgGameScore ?? "-"} 分` },
-    { cap: "活跃玩家", accent: "var(--random)", val: FMT0(g.uniquePlayers), unit: "人",
-      sub: `人均 ${g.avgGamesPerPlayer ?? "-"} 场` }
+    { cap: gamesCard.cap, accent: "var(--qixing)", val: gamesCard.val, unit: gamesCard.unit, sub: gamesCard.sub },
+    { cap: WINDOWED ? "活跃玩家(累计)" : "活跃玩家", accent: "var(--random)",
+      val: g.uniquePlayers != null ? FMT0(g.uniquePlayers) : "—", unit: g.uniquePlayers != null ? "人" : "",
+      sub: g.uniquePlayers != null ? `人均 ${g.avgGamesPerPlayer ?? "-"} 场` : "该时段无数据" }
   ];
 
   document.getElementById("kpiRow").innerHTML = cards.map(c => `
@@ -116,7 +213,7 @@ function renderKPIs() {
       <div class="kpi-cap">${c.cap}</div>
       <div class="kpi-main">
         ${c.ava
-          ? `<img class="kpi-ava" src="${avaUrl(c.ava.charId)}" alt="" loading="lazy" onerror="${onErrAva}">`
+          ? `<img class="kpi-ava clickable-ava" data-cid="${c.ava.charId}" src="${avaUrl(c.ava.charId)}" alt="" loading="lazy" onerror="${onErrAva}">`
           : ""}
         <span class="kpi-val ${c.small ? "small" : ""}">${c.val}</span>
         ${c.unit ? `<span class="kpi-unit">${c.unit}</span>` : ""}
@@ -128,7 +225,7 @@ function renderKPIs() {
 // ---------- 门派强弱横条 ----------
 function sectAverages() {
   return window.SECTS.map(sect => {
-    const list = DATA.characters.filter(c => c.sect === sect && c.avg != null);
+    const list = VIEW.characters.filter(c => c.sect === sect && c.avg != null);
     const mean = list.length ? list.reduce((s, c) => s + c.avg, 0) / list.length : 0;
     return { sect, mean, n: list.length };
   }).sort((a, b) => b.mean - a.mean);
@@ -152,10 +249,23 @@ function renderSectBars() {
   });
 }
 
-// ---------- 主榜 ----------
+// ---------- 主榜(窗口态带 Δ 角标) ----------
+function deltaBadge(charId, k) {
+  if (!WINDOWED) return "";
+  const b = baseCharOf(charId);
+  if (!b || b[k] == null) return "";
+  const cur = (VIEW.characters.find(c => c.charId === charId) || {})[k];
+  if (cur == null) return "";
+  const d = cur - b[k];
+  const r = Math.round(d);
+  if (r === 0) return "";
+  const dir = r > 0 ? "up" : "down";
+  const arrow = r > 0 ? "▲" : "▼";
+  return `<span class="dlt ${dir}">${arrow}${Math.abs(r).toLocaleString("zh-CN")}</span>`;
+}
 function renderBoard() {
   const tb = document.querySelector("#board tbody");
-  let rows = DATA.characters.filter(c => c[sortKey] != null);
+  let rows = VIEW.characters.filter(c => c[sortKey] != null);
   if (activeSect !== "all") rows = rows.filter(c => c.sect === activeSect);
   rows = rows.sort((a, b) => (a[sortKey] - b[sortKey]) * sortDir);
 
@@ -167,11 +277,11 @@ function renderBoard() {
     const t = window.SECT_THEME[c.sect] || {};
     const medal = rank <= 3 ? `rank-${rank}` : "";
     const cells = cols.map(k =>
-      `<td class="num ${sortKey === k ? "hot" : ""}">${FMT(c[k])}</td>`).join("");
+      `<td class="num ${sortKey === k ? "hot" : ""}"><span class="cellv">${FMT(c[k])}</span>${deltaBadge(c.charId, k)}</td>`).join("");
     return `<tr class="sect-${t.key}">
       <td class="col-rank"><span class="rank-badge ${medal}">${rank}</span></td>
       <td class="col-char"><div class="cchar">
-        <img src="${avaUrl(c.charId)}" class="ava" alt="" loading="lazy" onerror="${onErrAva}">
+        <img src="${avaUrl(c.charId)}" class="ava clickable-ava" data-cid="${c.charId}" alt="" loading="lazy" onerror="${onErrAva}">
         <div class="cmeta"><span class="cname">${c.name}</span><span class="stag">${c.sect}</span></div>
       </div></td>
       ${cells}
@@ -203,7 +313,74 @@ function bindHeaders() {
   });
 }
 
-// ---------- ⑤ 崛起 / 衰落榜 (历史 avg 线性回归斜率) ----------
+// ---------- Δ 本段变化总览: 涨跌榜 + 门派此消彼长 ----------
+function renderChangeOverview() {
+  const desc = document.getElementById("changeDesc");
+  if (desc) desc.textContent = WINDOWED ? "所选区间内的涨跌 · 相对窗口起点" : "自开采以来的累计涨跌 · 选时间区间后看本段";
+
+  // 各角色 avg 在窗口内的绝对涨跌(dr=取整后,过滤亚 1 分噪声 & 避免 -0)
+  const moves = VIEW.characters.filter(c => c.avg != null).map(c => {
+    const b = baseCharOf(c.charId);
+    const d = (b && b.avg != null) ? c.avg - b.avg : null;
+    return { c, d, dr: d == null ? null : (Math.round(d) || 0) };
+  }).filter(m => m.d != null);
+
+  const box = document.getElementById("changeMovers");
+  if (box) {
+    if (moves.length < 1 || (BASE === VIEW)) {
+      box.innerHTML = `<div class="tier-empty" style="grid-column:1/-1">区间内尚无变化(快照不足)</div>`;
+    } else {
+      // 只放真实涨/跌(按取整值):全榜普涨时"跌幅"列应空,亚 1 分波动不计
+      const gainers = moves.filter(m => m.dr > 0).sort((a, b) => b.dr - a.dr).slice(0, 5);
+      const losers  = moves.filter(m => m.dr < 0).sort((a, b) => a.dr - b.dr).slice(0, 5);
+      const item = m => {
+        const dir = m.dr >= 0 ? "up" : "down";
+        const sign = m.dr > 0 ? "+" : "";
+        return `<div class="mover-item">
+          <img src="${avaUrl(m.c.charId)}" alt="" loading="lazy" onerror="${onErrAva}">
+          <div>
+            <div class="mover-name">${m.c.name}</div>
+            <div class="mover-sub">${m.c.sect} · 均分 ${FMT0(m.c.avg)}</div>
+          </div>
+          <div class="mover-delta ${dir}">${sign}${m.dr.toLocaleString("zh-CN")}</div>
+        </div>`;
+      };
+      const col = (title, list, cls, emptyTxt) =>
+        `<div class="mover-col ${cls}"><h4>${title}</h4>${
+          list.length ? list.map(item).join("") : `<div class="tier-empty">${emptyTxt}</div>`}</div>`;
+      box.innerHTML = col("▲ 本段涨幅", gainers, "up", "本段无角色上涨")
+                    + col("▼ 本段跌幅", losers, "down", "本段无角色下跌");
+    }
+  }
+
+  // 门派此消彼长: 各门派均分净涨跌(发散横条)
+  const shifts = window.SECTS.map(sect => {
+    const list = moves.filter(m => m.c.sect === sect);
+    const mean = list.length ? list.reduce((s, m) => s + m.d, 0) / list.length : 0;
+    return { sect, mean, n: list.length };
+  }).sort((a, b) => b.mean - a.mean);
+  const sbox = document.getElementById("sectShift");
+  if (sbox) {
+    const maxAbs = Math.max(...shifts.map(s => Math.abs(s.mean)), 1);
+    sbox.innerHTML = shifts.map(s => {
+      const t = window.SECT_THEME[s.sect];
+      const pct = (Math.abs(s.mean) / maxAbs) * 50;   // 半轴最多 50%
+      const rm = Math.round(s.mean) || 0;             // 取整,避免 -0
+      const pos = rm >= 0;
+      const sign = rm > 0 ? "+" : "";
+      return `<div class="shift-row sect-${t.key}">
+        <div class="shift-label"><span class="sect-dot"></span>${s.sect}</div>
+        <div class="shift-track">
+          <div class="shift-mid"></div>
+          <div class="shift-fill ${pos ? "pos" : "neg"}" style="width:${pct}%"></div>
+        </div>
+        <div class="shift-val ${pos ? "pos" : "neg"}">${sign}${rm.toLocaleString("zh-CN")}</div>
+      </div>`;
+    }).join("");
+  }
+}
+
+// ---------- 崛起 / 衰落榜 (窗口内 avg 线性回归斜率) ----------
 function linregSlope(ys) {
   const pts = ys.map((y, i) => [i, y]).filter(p => p[1] != null);
   const n = pts.length;
@@ -224,11 +401,9 @@ function renderMovers(snaps) {
     box.innerHTML = `<div class="tier-empty" style="grid-column:1/-1">趋势数据将随采集累积</div>`;
     return;
   }
-  // 仅看近 ~12 个快照(约最近窗口),避免老化稀释
-  const recent = snaps.slice(-12);
-  const span = recent.length - 1;
-  const movers = DATA.characters.filter(c => c.avg != null).map(c => {
-    const series = recent.map(s => {
+  const span = snaps.length - 1;
+  const movers = VIEW.characters.filter(c => c.avg != null).map(c => {
+    const series = snaps.map(s => {
       const e = (s.characters || []).find(x => x.charId === c.charId);
       return e && e.avg != null ? e.avg : null;
     });
@@ -257,7 +432,6 @@ function renderMovers(snaps) {
     <div class="mover-col up"><h4>▲ 崛起榜</h4>${up.map(m => item(m, "up")).join("")}</div>
     <div class="mover-col down"><h4>▼ 衰落榜</h4>${down.map(m => item(m, "down")).join("")}</div>`;
 
-  // 迷你火花线
   box.querySelectorAll(".mover-spark").forEach(cv => drawSpark(cv));
 }
 
@@ -280,13 +454,51 @@ function drawSpark(cv) {
   ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.lineJoin = "round"; ctx.stroke();
 }
 
+// ---------- 时间区间选择器 ----------
+function setupTimeRange() {
+  document.querySelectorAll("#rbPresets .rb-chip").forEach(btn => {
+    btn.onclick = () => {
+      WIN = { preset: btn.dataset.preset, startMs: null, endMs: null };
+      document.querySelectorAll("#rbPresets .rb-chip")
+        .forEach(b => b.classList.toggle("active", b === btn));
+      applyWindow();
+    };
+  });
+  const apply = document.getElementById("rbApply");
+  if (apply) apply.onclick = () => {
+    const sv = document.getElementById("rbStart").value;
+    const ev = document.getElementById("rbEnd").value;
+    if (!sv && !ev) return;
+    const sMs = sv ? new Date(sv).getTime() : null;
+    const eMs = ev ? new Date(ev).getTime() : null;
+    if (sMs != null && eMs != null && sMs > eMs) { flashApply("起 > 止"); return; }
+    WIN = { preset: "custom", startMs: sMs, endMs: eMs };
+    document.querySelectorAll("#rbPresets .rb-chip").forEach(b => b.classList.remove("active"));
+    applyWindow();
+  };
+}
+function flashApply(msg) {
+  const b = document.getElementById("rbApply");
+  if (!b) return;
+  const old = b.textContent;
+  b.textContent = msg; b.classList.add("warn");
+  setTimeout(() => { b.textContent = old; b.classList.remove("warn"); }, 1400);
+}
+// 历史到位后,把自定义输入默认填成数据起止(本地墙钟),方便用户微调
+function syncCustomInputsDefault() {
+  if (!HISTORY || !HISTORY.length) return;
+  const s = document.getElementById("rbStart"), e = document.getElementById("rbEnd");
+  if (s && !s.value) { const t = tsMs(HISTORY[0]); if (t != null) s.value = toLocalInput(t); }
+  if (e && !e.value) { const t = tsMs(HISTORY[HISTORY.length - 1]); if (t != null) e.value = toLocalInput(t); }
+}
+
 // ---------- 单角色趋势筛选器(指标 + 角色,联动 charts.js) ----------
 function setupTrendFilter() {
   const sel = document.getElementById("trendCharSel");
-  if (sel && DATA) {
+  if (sel && VIEW) {
     const cur = sel.value;
     const bySect = {};
-    DATA.characters.forEach(c => { (bySect[c.sect] = bySect[c.sect] || []).push(c); });
+    VIEW.characters.forEach(c => { (bySect[c.sect] = bySect[c.sect] || []).push(c); });
     let html = '<option value="all">全部角色</option>';
     Object.keys(bySect).forEach(sect => {
       html += `<optgroup label="${sect}">`;
@@ -300,6 +512,8 @@ function setupTrendFilter() {
   if (msel) msel.onchange = () => window.applyTrendMetric && window.applyTrendMetric(msel.value);
 }
 
+bindHeaders();
+setupTimeRange();
 load();
-// 页面常开自动刷新(每5分钟);data 请求带时间戳绕缓存。历史快照重置以便重新累积。
+// 页面常开自动刷新(每5分钟):重拉数据/历史,保留当前窗口选择。
 setInterval(() => { HISTORY = null; load(); }, 5 * 60 * 1000);

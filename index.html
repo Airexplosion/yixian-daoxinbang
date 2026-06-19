@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>宗门大比 · 道心榜 — 弈仙牌数据大屏</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="card.css">
 <script src="vendor/echarts.min.js"></script>
+<script src="vendor/spine-webgl.js"></script>
 </head>
 <body>
 
@@ -23,6 +25,29 @@
   <span class="tb-chip" id="gen">更新中…</span>
   <span class="tb-chip live"><span class="dot"></span>每 5 分钟自动刷新</span>
 </header>
+
+<!-- ============ 时间区间选择器 ============ -->
+<div class="rangebar" id="rangeBar">
+  <div class="rb-inner">
+    <span class="rb-label">时间区间</span>
+    <div class="rb-presets" id="rbPresets">
+      <button class="rb-chip active" data-preset="all">全部</button>
+      <button class="rb-chip" data-preset="24h">近 24 小时</button>
+      <button class="rb-chip" data-preset="3d">近 3 天</button>
+      <button class="rb-chip" data-preset="7d">近 7 天</button>
+    </div>
+    <span class="rb-sep"></span>
+    <div class="rb-custom">
+      <span class="rb-cap">自定义</span>
+      <input type="datetime-local" id="rbStart" class="rb-input" step="60">
+      <span class="rb-tilde">→</span>
+      <input type="datetime-local" id="rbEnd" class="rb-input" step="60">
+      <button class="rb-apply" id="rbApply">应用</button>
+    </div>
+    <div class="tb-spacer"></div>
+    <span class="rb-echo" id="rbEcho"></span>
+  </div>
+</div>
 
 <main class="wrap">
 
@@ -72,6 +97,31 @@
             </table>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Δ 本段变化总览 ============ -->
+  <section class="zone" id="changeZone">
+    <div class="zone-head">
+      <span class="zone-no zone-delta">Δ</span>
+      <span class="zone-title">本段变化总览</span>
+      <span class="zone-desc" id="changeDesc">所选区间内的涨跌 · 相对窗口起点</span>
+    </div>
+    <div class="grid g-2">
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">本段涨跌榜</h3>
+          <p class="panel-desc">均分相对窗口起点的绝对涨跌 · 涨绿跌红</p>
+        </div>
+        <div class="panel-body"><div class="change-wrap" id="changeMovers"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3 class="panel-title">门派此消彼长</h3>
+          <p class="panel-desc">各门派均分在本段的净涨跌</p>
+        </div>
+        <div class="panel-body"><div class="shift-bars" id="sectShift"></div></div>
       </div>
     </div>
   </section>
@@ -227,5 +277,7 @@
 <script src="theme.js"></script>
 <script src="main.js"></script>
 <script src="charts.js"></script>
+<script src="card-spine.js"></script>
+<script src="card.js"></script>
 </body>
 </html>

@@ -2,8 +2,13 @@
 //  宗门大比 · 道心榜 数据大屏 — ECharts 图表
 //  四象限 / 天花板门槛 / 头部集中度 / 门槛榜 / 雷达
 //  门派趋势 / 单角色趋势 / 全榜总分 / 箱线图 / 分布
+//  快照态图读 viewSnap;趋势态图读 winHistory(已裁剪到所选窗口)
 // ===================================================================
-window.renderCharts = function (data, getHistory) {
+window.renderCharts = function (viewSnap, winHistory, baseSnap) {
+  // 幂等:窗口切换会重复调用,先释放上一批实例,避免同 DOM 重复 init
+  if (window._dashCharts) { window._dashCharts.forEach(c => { try { c.dispose(); } catch (e) {} }); }
+  const data = viewSnap;
+  const snapsIn = (winHistory || []).slice().sort((a, b) => new Date(a.generatedAt) - new Date(b.generatedAt));
   const chars = data.characters.filter(c => c.avg != null);
   const charts = [];
   const reg = c => { charts.push(c); return c; };
@@ -234,14 +239,11 @@ window.renderCharts = function (data, getHistory) {
     const trendSect = mk("trend");
     const trendChar = mk("trendChar");
     const trendSum = mk("trendSum");
-    [trendSect, trendChar, trendSum].forEach(c => c && c.showLoading({ text: "", color: "#38bdf8", maskColor: "rgba(0,0,0,0)" }));
 
     const sectOf = {}; chars.forEach(c => { sectOf[c.charId] = c.sect; });
-    const get = getHistory || (() => Promise.resolve([]));
 
-    get().then(snaps => {
-      [trendSect, trendChar, trendSum].forEach(c => c && c.hideLoading());
-      snaps = (snaps || []).slice().sort((a, b) => new Date(a.generatedAt) - new Date(b.generatedAt));
+    (function () {
+      const snaps = snapsIn;            // 已裁剪到窗口的历史
       const xLabels = snaps.map(s => {
         const d = new Date(s.generatedAt);
         return isNaN(d) ? s.generatedAt
@@ -350,11 +352,17 @@ window.renderCharts = function (data, getHistory) {
         });
         emptyHint(trendSum);
       }
-    }).catch(() => { [trendSect, trendChar, trendSum].forEach(c => c && c.hideLoading()); });
+    })();
   })();
 
-  // 响应式
-  let rt;
-  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => charts.forEach(c => c.resize()), 120); });
+  // 响应式(只绑一次,避免窗口切换反复堆叠监听)
   window._dashCharts = charts;
+  if (!window._dashResizeBound) {
+    let rt;
+    window.addEventListener("resize", () => {
+      clearTimeout(rt);
+      rt = setTimeout(() => (window._dashCharts || []).forEach(c => { try { c.resize(); } catch (e) {} }), 120);
+    });
+    window._dashResizeBound = true;
+  }
 };
