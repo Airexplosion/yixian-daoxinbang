@@ -208,10 +208,7 @@ function renderKPIs() {
     { cap: hotCard.cap, accent: "var(--jian)", val: hotCard.val, sub: hotCard.sub, ava: hotCard.ava, small: true },
     { cap: "最卷角色", accent: "var(--wuxing)", val: toughest ? toughest.name : "-",
       sub: toughest ? `门槛 ${FMT0(toughest.threshold)} · ${toughest.sect}` : "", ava: toughest, small: true },
-    { cap: gamesCard.cap, accent: "var(--qixing)", val: gamesCard.val, unit: gamesCard.unit, sub: gamesCard.sub },
-    { cap: WINDOWED ? "活跃玩家(累计)" : "活跃玩家", accent: "var(--random)",
-      val: g.uniquePlayers != null ? FMT0(g.uniquePlayers) : "—", unit: g.uniquePlayers != null ? "人" : "",
-      sub: g.uniquePlayers != null ? `人均 ${g.avgGamesPerPlayer ?? "-"} 场` : "该时段无数据" }
+    { cap: gamesCard.cap, accent: "var(--qixing)", val: gamesCard.val, unit: gamesCard.unit, sub: gamesCard.sub }
   ];
 
   document.getElementById("kpiRow").innerHTML = cards.map(c => `
