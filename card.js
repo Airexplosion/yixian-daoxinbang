@@ -152,6 +152,17 @@
       `<span class="cd-dots"></span>` +
       `<span class="cd-value">${valueHtml}</span>${dBadge(delta)}</div>`;
   }
+  // 前 N 均分行:默认含榜一(t{N}w),按钮切去榜一(t{N}n)。两份值/Δ 存 data-*,点击就地切换。
+  function topAvgRow(cur, cid, label, k) {
+    const vw = cur["t" + k + "w"], vn = cur["t" + k + "n"];
+    const dw = deltaOf(cur, cid, "t" + k + "w"), dn = deltaOf(cur, cid, "t" + k + "n");
+    const A = x => (x == null ? "" : x);
+    return `<div class="cd-row cd-row-tg" data-mode="w" data-vw="${A(vw)}" data-vn="${A(vn)}" ` +
+      `data-dw="${A(dw)}" data-dn="${A(dn)}">` +
+      `<span class="cd-label">${label}<button type="button" class="cd-tg">含榜一</button></span>` +
+      `<span class="cd-dots"></span>` +
+      `<span class="cd-vwrap"><span class="cd-value">${F0(vw)}</span>${dBadge(dw)}</span></div>`;
+  }
 
   function render(cid) {
     const cur = charOf(window.VIEW, cid);
@@ -181,7 +192,9 @@
         <div class="cd-rule"><i class="cd-cloud"></i></div>
         <div class="cd-stats">
           ${statRow("顶分", F0(cur.top), deltaOf(cur, cid, "top"))}
-          ${statRow("前十均分", F0(cur.top10avg), deltaOf(cur, cid, "top10avg"))}
+          ${topAvgRow(cur, cid, "前十均分", 10)}
+          ${topAvgRow(cur, cid, "前二十均分", 20)}
+          ${topAvgRow(cur, cid, "前三十均分", 30)}
           ${statRow("去榜一均分", F0(cur.avg), deltaOf(cur, cid, "avg"))}
           ${statRow("场均分", F1(cur.avgGameScore), deltaOf(cur, cid, "avgGameScore", 1))}
           ${statRow("入榜门槛", F0(cur.threshold), deltaOf(cur, cid, "threshold"))}
@@ -191,6 +204,21 @@
         <div class="cd-tiers">${tierHtml}</div>
         <div class="cd-stamp">${SEAL[cur.sect] || "·"}</div>
       </div>`;
+
+    // 前 N 均分行:点「去榜一/含榜一」就地切换值+Δ(每次开卡重渲,故每次重新绑定)
+    overlay.querySelectorAll(".card-left .cd-row-tg").forEach(row => {
+      const btn = row.querySelector(".cd-tg");
+      btn.addEventListener("click", () => {
+        const toN = row.dataset.mode === "w";          // 当前含榜一 → 切去榜一
+        row.dataset.mode = toN ? "n" : "w";
+        const v = toN ? row.dataset.vn : row.dataset.vw;
+        const d = toN ? row.dataset.dn : row.dataset.dw;
+        row.querySelector(".cd-vwrap").innerHTML =
+          `<span class="cd-value">${F0(v === "" ? null : Number(v))}</span>` +
+          dBadge(d === "" ? null : Number(d));
+        btn.textContent = toN ? "去榜一" : "含榜一";   // 按钮=当前显示状态(与分数对应)
+      });
+    });
 
     const right = overlay.querySelector(".card-right");
     right.innerHTML = `
@@ -247,7 +275,12 @@
     board.style.transform = "none";
     const bw = board.offsetWidth, bh = board.offsetHeight;
     if (!bw || !bh) return;
-    const s = Math.max(1, Math.min(left.clientWidth * 0.86 / bw, left.clientHeight * 0.9 / bh, 1.7));
+    // 手机竖屏(上下堆叠):上半区只有 ~52vh,榜文放不下时必须允许缩小到塞进去 → 封顶 1×,绝不溢出。
+    // 横屏(左右分栏):空间足,保持原逻辑「只放大不缩小」,封顶 1.7×。
+    const narrow = window.innerWidth <= 760;
+    const s = narrow
+      ? Math.min(left.clientWidth * 0.94 / bw, left.clientHeight * 0.96 / bh, 1)
+      : Math.max(1, Math.min(left.clientWidth * 0.86 / bw, left.clientHeight * 0.9 / bh, 1.7));
     board.style.transform = "scale(" + s.toFixed(3) + ")";
   }
 

@@ -336,9 +336,12 @@ function renderChangeOverview() {
     if (moves.length < 1 || (BASE === VIEW)) {
       box.innerHTML = `<div class="tier-empty" style="grid-column:1/-1">区间内尚无变化(快照不足)</div>`;
     } else {
-      // 只放真实涨/跌(按取整值):全榜普涨时"跌幅"列应空,亚 1 分波动不计
-      const gainers = moves.filter(m => m.dr > 0).sort((a, b) => b.dr - a.dr).slice(0, 5);
-      const losers  = moves.filter(m => m.dr < 0).sort((a, b) => a.dr - b.dr).slice(0, 5);
+      // 道心赛季普遍通胀 → 均分绝对涨跌几乎全正,"跌幅"列长期空。改为:涨幅=涨最多 Top5,
+      // 右列=**涨势垫底**(涨最少/在跌的 Bottom5,排掉已在涨幅列的),每项按自身正负上色。
+      const byDr = moves.slice().sort((a, b) => b.dr - a.dr);
+      const gainers = byDr.filter(m => m.dr > 0).slice(0, 5);
+      const topIds = new Set(gainers.map(m => m.c.charId));
+      const losers  = byDr.filter(m => !topIds.has(m.c.charId)).slice(-5).reverse();
       const item = m => {
         const dir = m.dr >= 0 ? "up" : "down";
         const sign = m.dr > 0 ? "+" : "";
@@ -355,7 +358,7 @@ function renderChangeOverview() {
         `<div class="mover-col ${cls}"><h4>${title}</h4>${
           list.length ? list.map(item).join("") : `<div class="tier-empty">${emptyTxt}</div>`}</div>`;
       box.innerHTML = col("▲ 本段涨幅", gainers, "up", "本段无角色上涨")
-                    + col("▼ 本段跌幅", losers, "down", "本段无角色下跌");
+                    + col("▼ 涨势垫底", losers, "down", "暂无数据");
     }
   }
 
