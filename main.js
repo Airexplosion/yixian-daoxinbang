@@ -74,7 +74,7 @@ function resolveWindow(hist) {
   // 返回 {startMs, endMs, windowed}; null 端表示开区间(不限)
   if (WIN.preset === "all") return { startMs: null, endMs: null, windowed: false };
   if (WIN.preset === "custom") return { startMs: WIN.startMs, endMs: WIN.endMs, windowed: true };
-  const span = { "24h": 864e5, "3d": 3 * 864e5, "7d": 7 * 864e5 }[WIN.preset];
+  const span = { "24h": 864e5, "3d": 3 * 864e5, "7d": 7 * 864e5, "30d": 30 * 864e5 }[WIN.preset];
   const end = Date.now();
   return { startMs: end - span, endMs: end, windowed: true };
 }
