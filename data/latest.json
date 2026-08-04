@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-04T21:30:34Z",
+  "generatedAt": "2026-08-04T21:41:40Z",
   "seasonId": 10,
   "characters": [
     {
@@ -251,13 +251,13 @@
       "charId": 1000005,
       "name": "陆剑心",
       "sect": "剑宗",
-      "t10w": 7981.2,
+      "t10w": 7985.8,
       "t10n": 7732.8,
-      "t20w": 7249.0,
+      "t20w": 7251.3,
       "t20n": 7091.9,
-      "t30w": 6879.3,
+      "t30w": 6880.8,
       "t30n": 6767.3,
-      "top": 9388,
+      "top": 9434,
       "avg": 5729.5,
       "sum": 567225,
       "median": 5450.0,
@@ -312,7 +312,7 @@
         "4800": 5,
         "4750": 5
       },
-      "games": 8035,
+      "games": 8036,
       "avgGameScore": 21.7
     },
     {
@@ -1568,7 +1568,7 @@
     }
   ],
   "gameStats": {
-    "totalGames": 182033,
+    "totalGames": 182034,
     "overallAvgGameScore": 21.6,
     "uniquePlayers": 3298,
     "avgGamesPerPlayer": 55.2
