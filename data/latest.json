@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T22:11:51Z",
+  "generatedAt": "2026-08-26T22:22:58Z",
   "seasonId": 10,
   "characters": [
     {
@@ -436,16 +436,16 @@
       "sect": "七星",
       "t10w": 7026.0,
       "t10n": 6745.2,
-      "t20w": 6588.3,
-      "t20n": 6432.8,
-      "t30w": 6338.9,
-      "t30n": 6221.2,
+      "t20w": 6588.8,
+      "t20n": 6433.3,
+      "t30w": 6339.2,
+      "t30n": 6221.5,
       "top": 9125,
-      "avg": 5228.2,
-      "sum": 517591,
+      "avg": 5228.3,
+      "sum": 517601,
       "median": 4893.0,
       "threshold": 4364,
-      "std": 752.7,
+      "std": 752.8,
       "top10avg": 6745.2,
       "p25": 4606.0,
       "p75": 5777.0,
@@ -492,7 +492,7 @@
         "4400": 2,
         "4350": 3
       },
-      "games": 7284,
+      "games": 7285,
       "avgGameScore": 19.1
     },
     {
@@ -1541,7 +1541,7 @@
     }
   ],
   "gameStats": {
-    "totalGames": 227028,
+    "totalGames": 227029,
     "overallAvgGameScore": 20.4,
     "uniquePlayers": 3510,
     "avgGamesPerPlayer": 64.7
