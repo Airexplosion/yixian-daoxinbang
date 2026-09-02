@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T20:00:45Z",
+  "generatedAt": "2026-09-02T20:11:52Z",
   "seasonId": 10,
   "characters": [
     {
@@ -1311,8 +1311,8 @@
       "t30w": 6966.3,
       "t30n": 6851.2,
       "top": 9626,
-      "avg": 6246.9,
-      "sum": 618444,
+      "avg": 6247.0,
+      "sum": 618453,
       "median": 6056.0,
       "threshold": 5701,
       "std": 524.5,
@@ -1344,14 +1344,14 @@
         "6100": 8,
         "6050": 14,
         "6000": 21,
-        "5950": 6,
-        "5900": 5,
+        "5950": 7,
+        "5900": 4,
         "5850": 2,
         "5800": 3,
         "5750": 2,
         "5700": 7
       },
-      "games": 12077,
+      "games": 12078,
       "avgGameScore": 15.0
     },
     {
@@ -1536,7 +1536,7 @@
     }
   ],
   "gameStats": {
-    "totalGames": 239145,
+    "totalGames": 239146,
     "overallAvgGameScore": 20.2,
     "uniquePlayers": 3585,
     "avgGamesPerPlayer": 66.7
