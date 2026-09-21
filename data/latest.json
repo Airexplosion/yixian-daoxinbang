@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-21T22:28:13Z",
+  "generatedAt": "2026-09-21T22:39:20Z",
   "seasonId": 10,
   "characters": [
     {
@@ -1320,13 +1320,13 @@
       "charId": 4000005,
       "name": "李㵘",
       "sect": "锻玄",
-      "t10w": 8558.1,
+      "t10w": 8563.5,
       "t10n": 8238.9,
-      "t20w": 7735.1,
+      "t20w": 7737.9,
       "t20n": 7524.1,
-      "t30w": 7214.8,
+      "t30w": 7216.6,
       "t30n": 7064.3,
-      "top": 10597,
+      "top": 10651,
       "avg": 6195.7,
       "sum": 613372,
       "median": 6025.0,
@@ -1372,7 +1372,7 @@
         "5300": 4,
         "5250": 1
       },
-      "games": 6906,
+      "games": 6907,
       "avgGameScore": 28.6
     },
     {
@@ -1503,7 +1503,7 @@
     }
   ],
   "gameStats": {
-    "totalGames": 269060,
+    "totalGames": 269061,
     "overallAvgGameScore": 19.7,
     "uniquePlayers": 3769,
     "avgGamesPerPlayer": 71.4
