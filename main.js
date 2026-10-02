@@ -147,8 +147,11 @@ function applyWindow() {
     (WINDOWED ? "定格于 " : "更新于 ") + fmtStamp(VIEW.generatedAt);
   const status = document.getElementById("seasonStatus");
   status.textContent = DATA.seasonStatus === "preseason"
-    ? `季前赛 · ${DATA.seasonStart} 正式开放道心模式；以下为接口当前返回数据`
+    ? `季前赛 · ${Number(DATA.seasonStart.slice(5, 7))}月${Number(DATA.seasonStart.slice(8, 10))}日开榜 · 接口数据`
     : (SEASON !== CURRENT_SEASON ? "历史赛季 · 已归档" : "当前赛季");
+  status.title = DATA.seasonStatus === "preseason"
+    ? `${DATA.seasonStart} 正式开放道心模式；当前显示游戏接口返回的重置后榜单数据。`
+    : status.textContent;
   if (!hasScores(DATA)) status.textContent += " · 暂无榜单数据";
   renderRangeEcho(startMs, endMs);
 
