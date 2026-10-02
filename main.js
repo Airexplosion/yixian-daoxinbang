@@ -2,6 +2,10 @@
 //  宗门大比 · 道心榜 数据大屏 — 主逻辑
 //  数据加载 / 时间区间 / KPI / 主榜(+Δ) / 门派横条 / 崛起衰落 / 本段变化总览 / 趋势筛选
 // ===================================================================
+let SEASON = null;
+let CURRENT_SEASON = null;
+let LOAD_ID = 0;
+let HISTORY_REQUEST = null;
 let DATA = null;               // latest.json(最新快照),默认/兜底
 let HISTORY = null;            // 历史快照(升序),只拉一次,供趋势/崛起/窗口复用
 let VIEW = null;               // 当前定格端快照(窗口末) —— 所有快照态面板的数据源
@@ -35,38 +39,59 @@ const toLocalInput = ms => {   // epoch ms → "YYYY-MM-DDTHH:mm"(datetime-local
   return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`;
 };
 
-async function load() {
-  try {
-    DATA = await (await fetch(bust("data/latest.json"))).json();
-  } catch (e) {
-    document.querySelector("#board tbody").innerHTML =
-      `<tr><td colspan="9" class="empty">数据加载失败</td></tr>`;
-    console.error("加载 latest.json 失败:", e);
-    return;
-  }
-
-  applyWindow();                       // 先用 latest 渲染(历史未到时窗口=单点)
-  setupTrendFilter();
-
-  getHistory().then(() => {            // 历史到位后重算窗口(Δ/趋势/崛起/总览才完整)
-    syncCustomInputsDefault();
-    applyWindow();
-  });
+async function jsonFetch(url) {
+  const r = await fetch(bust(url));
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
 }
-
-// 历史快照只拉一次,后续复用(charts.js 也通过 getHistory 共享)
+function seasonRoot(sid = SEASON) { return `data/seasons/${sid}`; }
+async function load() {
+  const id = ++LOAD_ID;
+  try {
+    const index = await jsonFetch("data/seasons/index.json");
+    if (id !== LOAD_ID) return;
+    CURRENT_SEASON = index.currentSeasonId;
+    const rows = index.seasons || [];
+    if (!rows.some(r => r.seasonId === SEASON)) {
+      const requested = Number(new URLSearchParams(location.search).get("seasonId"));
+      SEASON = rows.some(r => r.seasonId === requested) ? requested : CURRENT_SEASON;
+    }
+    const sel = document.getElementById("seasonSel");
+    sel.replaceChildren(...rows.map(row => {
+      const option = document.createElement("option");
+      option.value = row.seasonId;
+      option.textContent = `${row.name} · S${row.seasonId}${row.seasonId === CURRENT_SEASON ? "（当前）" : ""}`;
+      return option;
+    }));
+    sel.value = SEASON;
+    const data = await jsonFetch(`${seasonRoot()}/latest.json`);
+    if (id !== LOAD_ID) return;
+    if (data.seasonId !== SEASON) throw new Error("赛季数据不匹配");
+    DATA = data;
+    HISTORY = null; HISTORY_REQUEST = null;
+    applyWindow(); setupTrendFilter();
+    await getHistory();
+    if (id !== LOAD_ID) return;
+    syncCustomInputsDefault(); applyWindow();
+  } catch (e) {
+    if (id !== LOAD_ID) return;
+    document.getElementById("seasonStatus").textContent = "赛季数据加载失败，请稍后刷新";
+    console.error("加载赛季失败:", e);
+  }
+}
 function getHistory() {
   if (HISTORY) return Promise.resolve(HISTORY);
-  return fetch(bust("data/history/index.json"))
-    .then(r => (r.ok ? r.json() : []))
-    .then(files => Promise.all(files.map(f =>
-      fetch(bust("data/history/" + f)).then(r => r.json()).catch(() => null))))
+  if (HISTORY_REQUEST) return HISTORY_REQUEST;
+  const sid = SEASON, id = LOAD_ID, root = seasonRoot(sid);
+  HISTORY_REQUEST = jsonFetch(`${root}/history/index.json`)
+    .then(files => Promise.all(files.map(f => jsonFetch(`${root}/history/${f}`).catch(() => null))))
     .then(raw => {
-      HISTORY = raw.filter(Boolean)
+      const history = raw.filter(s => s && s.seasonId === sid)
         .sort((a, b) => new Date(a.generatedAt) - new Date(b.generatedAt));
-      return HISTORY;
-    })
-    .catch(() => { HISTORY = []; return HISTORY; });
+      if (id === LOAD_ID) HISTORY = history;
+      return history;
+    }).catch(() => { if (id === LOAD_ID) HISTORY = []; return []; });
+  return HISTORY_REQUEST;
 }
 
 // ============ 时间区间:解析窗口 + 选定格端/基线/裁剪 ============
@@ -75,7 +100,7 @@ function resolveWindow(hist) {
   if (WIN.preset === "all") return { startMs: null, endMs: null, windowed: false };
   if (WIN.preset === "custom") return { startMs: WIN.startMs, endMs: WIN.endMs, windowed: true };
   const span = { "24h": 864e5, "3d": 3 * 864e5, "7d": 7 * 864e5, "30d": 30 * 864e5 }[WIN.preset];
-  const end = Date.now();
+  const end = SEASON === CURRENT_SEASON ? Date.now() : tsMs(DATA);
   return { startMs: end - span, endMs: end, windowed: true };
 }
 function hasScores(s) { return !!(s && s.characters && s.characters.some(c => c.avg != null)); }
@@ -119,7 +144,11 @@ function applyWindow() {
   // 顶栏戳记 + 窗口回显
   document.getElementById("gen").textContent =
     (WINDOWED ? "定格于 " : "更新于 ") + fmtStamp(VIEW.generatedAt);
-  if (VIEW.seasonId != null) document.getElementById("seasonId").textContent = VIEW.seasonId;
+  const status = document.getElementById("seasonStatus");
+  status.textContent = DATA.seasonStatus === "preseason"
+    ? `季前赛 · ${DATA.seasonStart} 正式开放道心模式；以下为接口当前返回数据`
+    : (SEASON !== CURRENT_SEASON ? "历史赛季 · 已归档" : "当前赛季");
+  if (!hasScores(DATA)) status.textContent += " · 暂无榜单数据";
   renderRangeEcho(startMs, endMs);
 
   renderKPIs();
@@ -518,6 +547,17 @@ function setupTrendFilter() {
   if (msel) msel.onchange = () => window.applyTrendMetric && window.applyTrendMetric(msel.value);
 }
 
+document.getElementById("seasonSel").onchange = event => {
+  SEASON = Number(event.target.value);
+  ++LOAD_ID; HISTORY = null; HISTORY_REQUEST = null;
+  WIN = {preset: "all", startMs: null, endMs: null};
+  document.querySelectorAll("#rbPresets .rb-chip").forEach(b => b.classList.toggle("active", b.dataset.preset === "all"));
+  for (const name of ["rbStart", "rbEnd"]) document.getElementById(name).value = "";
+  const url = new URL(location.href); url.searchParams.set("seasonId", SEASON);
+  history.replaceState(null, "", url);
+  document.getElementById("seasonStatus").textContent = "正在加载赛季…";
+  load();
+};
 bindHeaders();
 setupTimeRange();
 load();

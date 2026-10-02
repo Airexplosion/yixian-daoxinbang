@@ -356,3 +356,6 @@ body{
   .kpi-row{ grid-template-columns:1fr; }
   .tb-sub{ display:none; }
 }
+
+#seasonSel {font: inherit; color: var(--text, #e7dfce); background: var(--bg, #161820); border: 1px solid #76664d; border-radius: 4px; padding: 3px 7px; max-width: 250px;}
+#seasonStatus {white-space: normal;}

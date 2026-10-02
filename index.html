@@ -8,7 +8,7 @@
 <!-- 古风字体:马善政毛笔楷书(标题/榜文/名次)+ 站酷小薇(数字,古风且清晰);按需子集加载 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ma-shan-zheng@5.2.9/index.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/zcool-xiaowei@5.2.8/index.css">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=seasons1">
 <link rel="stylesheet" href="card.css">
 <script src="vendor/echarts.min.js"></script>
 <script src="vendor/spine-webgl.js"></script>
@@ -25,7 +25,8 @@
     </div>
   </div>
   <div class="tb-spacer"></div>
-  <span class="tb-chip">赛季 <b id="seasonId">10</b></span>
+  <label class="tb-chip">赛季 <select id="seasonSel" aria-label="选择赛季"></select></label>
+  <span class="tb-chip" id="seasonStatus" role="status">加载赛季…</span>
   <span class="tb-chip" id="gen">更新中…</span>
   <span class="tb-chip live"><span class="dot"></span>每 5 分钟自动刷新</span>
 </header>
@@ -281,7 +282,7 @@
 </main>
 
 <script src="theme.js"></script>
-<script src="main.js"></script>
+<script src="main.js?v=seasons1"></script>
 <script src="charts.js"></script>
 <script src="card-spine.js"></script>
 <script src="card.js"></script>
