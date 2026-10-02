@@ -125,7 +125,8 @@ function applyWindow() {
   const lastH = hist[hist.length - 1];
   if (DATA && DATA !== lastH) {
     const td = tsMs(DATA), tl = lastH ? tsMs(lastH) : null;
-    if (!lastH || td == null || tl == null || td >= tl) hist.push(DATA);
+    if (lastH && td != null && td === tl) hist[hist.length - 1] = DATA;
+    else if (!lastH || td == null || tl == null || td > tl) hist.push(DATA);
   }
   if (!hist.length) hist = [DATA];
   const { startMs, endMs, windowed } = resolveWindow(hist);
